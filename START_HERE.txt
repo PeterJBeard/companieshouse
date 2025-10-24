@@ -1,0 +1,63 @@
+================================================================================
+    COMPANIES HOUSE FINANCIAL DATA EXTRACTOR
+    Super Simple - No Coding Required!
+================================================================================
+
+QUICK START (3 Easy Steps):
+
+1. Make sure you have Python installed
+   - Download from: https://www.python.org/downloads/
+   - ✅ Check "Add Python to PATH" during installation
+
+2. Double-click one of these files to start the app:
+
+   Windows users: Double-click "START_APP.bat"
+   Mac/Linux users: Double-click "START_APP.sh"
+
+3. Open your web browser and go to:
+
+   http://localhost:5000
+
+That's it! 🎉
+
+================================================================================
+
+WHAT THIS APP DOES:
+
+✅ Extracts financial data from UK company accounts
+✅ Shows balance sheet and profit & loss information
+✅ Compares current year vs previous year
+✅ Downloads data as CSV for Excel
+✅ Works completely in your web browser
+✅ No coding or terminal commands needed!
+
+================================================================================
+
+NEED HELP?
+
+📖 Read "HOW_TO_USE.md" for detailed instructions
+📱 Read "VISUAL_GUIDE.md" for pictures and screenshots
+🔧 Read "README.md" for technical details (if you're curious)
+
+================================================================================
+
+YOUR API KEY IS ALREADY SET UP:
+41e3bec9-855e-4a37-bb54-35af2cc6bd81
+
+You don't need to do anything with it - it just works! ✅
+
+================================================================================
+
+TRY THESE COMPANY NUMBERS:
+
+00000006 - Old UK company (good for testing)
+00445790 - Marks and Spencer
+09252748 - Small company example
+
+Find more at: https://find-and-update.company-information.service.gov.uk
+
+================================================================================
+
+Questions? Just click buttons and explore - you can't break anything! 😊
+
+================================================================================

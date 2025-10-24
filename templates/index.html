@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Companies House Financial Data Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .success {
+            background: #efe;
+            color: #3a3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .company-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .company-info h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .company-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .results-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .results-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .summary h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .summary-item .label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .summary-item .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💼 Companies House Financial Extractor</h1>
+            <p>Extract financial data from UK company accounts - no technical skills needed!</p>
+        </div>
+
+        <div class="card">
+            <div class="error" id="error-message"></div>
+            <div class="success" id="success-message"></div>
+
+            <div class="input-group">
+                <label for="company-number">Company Number</label>
+                <input type="text" id="company-number" placeholder="e.g., 00000006" maxlength="8">
+                <div class="help-text">Enter an 8-digit company number (try 00000006 for testing)</div>
+            </div>
+
+            <div class="input-group">
+                <label for="filter-type">What do you want to see?</label>
+                <select id="filter-type">
+                    <option value="all">Everything</option>
+                    <option value="balance-sheet">Balance Sheet Only</option>
+                    <option value="profit-loss">Profit & Loss Only</option>
+                </select>
+            </div>
+
+            <button class="button" id="extract-btn" onclick="extractFinancials()">
+                📊 Extract Financial Data
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Fetching data from Companies House...</p>
+            </div>
+        </div>
+
+        <div class="card hidden" id="results-card">
+            <h2 style="margin-bottom: 20px;">📈 Financial Results</h2>
+
+            <div class="company-info" id="company-info"></div>
+
+            <div style="overflow-x: auto;">
+                <table class="results-table" id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Current Year</th>
+                            <th>Previous Year</th>
+                            <th>Change</th>
+                            <th>Change %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="summary" id="summary"></div>
+
+            <div class="button-group">
+                <button class="button" onclick="downloadCSV()">💾 Download CSV</button>
+                <button class="button button-secondary" onclick="startOver()">🔄 New Search</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            setTimeout(() => errorEl.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success-message');
+            successEl.textContent = message;
+            successEl.classList.add('show');
+            setTimeout(() => successEl.classList.remove('show'), 3000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('show', show);
+            document.getElementById('extract-btn').disabled = show;
+        }
+
+        async function extractFinancials() {
+            const companyNumber = document.getElementById('company-number').value.trim();
+            const filterType = document.getElementById('filter-type').value;
+
+            if (!companyNumber) {
+                showError('Please enter a company number');
+                return;
+            }
+
+            showLoading(true);
+            document.getElementById('results-card').classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/extract-financials', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        company_number: companyNumber,
+                        filter: filterType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to extract data');
+                }
+
+                currentData = data;
+                displayResults(data);
+                showSuccess('Financial data extracted successfully!');
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayResults(data) {
+            // Show company info
+            const companyInfo = data.company_info;
+            const infoHTML = `
+                <h3>${companyInfo.company_name || 'Unknown Company'}</h3>
+                <p><strong>Company Number:</strong> ${companyInfo.company_number || 'N/A'}</p>
+                <p><strong>Period End:</strong> ${companyInfo.period_end || 'N/A'}</p>
+            `;
+            document.getElementById('company-info').innerHTML = infoHTML;
+
+            // Display financial items
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = '';
+
+            data.financial_items.forEach(item => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${item.item}</strong></td>
+                    <td>${item.current_year}</td>
+                    <td>${item.previous_year}</td>
+                    <td>${item.change}</td>
+                    <td>${item.change_pct}</td>
+                `;
+            });
+
+            // Display summary
+            const summary = data.summary;
+            const summaryHTML = `
+                <h3>Summary</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="label">Total Items</div>
+                        <div class="value">${summary.total_items}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Current Year Total</div>
+                        <div class="value">£${summary.total_current_year.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Previous Year Total</div>
+                        <div class="value">£${summary.total_previous_year.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Total Change</div>
+                        <div class="value">£${summary.total_change.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('summary').innerHTML = summaryHTML;
+
+            // Show results
+            document.getElementById('results-card').classList.remove('hidden');
+        }
+
+        function downloadCSV() {
+            if (!currentData) return;
+
+            const csv = generateCSV(currentData.financial_items);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'financial_data.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showSuccess('CSV downloaded!');
+        }
+
+        function generateCSV(items) {
+            let csv = 'Item,Current Year,Previous Year,Change,Change %\n';
+            items.forEach(item => {
+                csv += `"${item.item}",${item.current_year},${item.previous_year},${item.change},${item.change_pct}\n`;
+            });
+            return csv;
+        }
+
+        function startOver() {
+            document.getElementById('company-number').value = '';
+            document.getElementById('results-card').classList.add('hidden');
+            currentData = null;
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('company-number').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                extractFinancials();
+            }
+        });
+    </script>
+</body>
+</html>
