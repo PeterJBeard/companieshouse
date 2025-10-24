@@ -1,0 +1,192 @@
+================================================================================
+          ABSOLUTE BEGINNER'S GUIDE - STEP BY STEP
+          You Can Do This! Just Follow Along 😊
+================================================================================
+
+STEP 1: GET THE FILES ON YOUR COMPUTER
+---------------------------------------
+
+Option A - If you have the files in a ZIP:
+1. Find the ZIP file on your computer
+2. Right-click it
+3. Click "Extract All" or "Unzip"
+4. Remember where you saved it!
+
+Option B - If someone sent you a link:
+1. Download all the files to a folder
+2. Remember where you saved them!
+
+================================================================================
+
+STEP 2: INSTALL PYTHON (One-Time Only)
+---------------------------------------
+
+1. Open your web browser (Chrome, Firefox, etc.)
+
+2. Go to this website:
+   https://www.python.org/downloads/
+
+3. You'll see a big yellow button that says:
+   "Download Python 3.12" (or similar number)
+
+4. Click that yellow button
+
+5. Wait for it to download (it's called something like "python-3.12.exe")
+
+6. Find the file you just downloaded (usually in your Downloads folder)
+
+7. Double-click it to run it
+
+8. ⚠️ IMPORTANT: At the bottom of the window, there's a checkbox that says:
+
+   ☐ Add Python to PATH
+
+   CLICK THAT BOX! ✓ (This is the most important step!)
+
+9. Then click the big button that says "Install Now"
+
+10. Wait a few minutes while it installs
+
+11. When it says "Setup was successful" - you're done!
+    Click "Close"
+
+================================================================================
+
+STEP 3: FIND YOUR FILES
+---------------------------------------
+
+1. Open "File Explorer" (Windows) or "Finder" (Mac)
+   - On Windows: Click the folder icon at the bottom of your screen
+   - On Mac: Click the blue smiley face icon
+
+2. Go to where you saved/unzipped the files
+
+3. You should see files like:
+   - START_APP.bat (Windows)
+   - START_APP.sh (Mac)
+   - web_app.py
+   - START_HERE.txt
+   - And some folders
+
+================================================================================
+
+STEP 4: START THE APP
+---------------------------------------
+
+Windows Users:
+1. Find the file called: START_APP.bat
+2. Double-click it
+3. A black window will appear with text scrolling
+4. Wait until you see:
+   "Open your web browser and go to:"
+   "http://localhost:5000"
+5. Keep this window open! Don't close it!
+
+Mac Users:
+1. Find the file called: START_APP.sh
+2. Right-click it
+3. Click "Open With" → "Terminal"
+4. A window will appear with text
+5. Wait until you see:
+   "Open your web browser and go to:"
+   "http://localhost:5000"
+6. Keep this window open! Don't close it!
+
+================================================================================
+
+STEP 5: OPEN THE APP IN YOUR BROWSER
+---------------------------------------
+
+1. Open your web browser (Chrome, Edge, Firefox, Safari - any will work!)
+
+2. Click in the address bar at the top (where you normally type website names)
+
+3. Type exactly this:
+   localhost:5000
+
+4. Press Enter
+
+5. You should see a PURPLE PAGE with:
+   "💼 Companies House Financial Extractor"
+
+🎉 SUCCESS! The app is running!
+
+================================================================================
+
+STEP 6: USE THE APP
+---------------------------------------
+
+Now you can use it like any website:
+
+1. In the "Company Number" box, type: 00000006
+   (This is a real company - good for testing)
+
+2. Leave the dropdown as "Everything"
+
+3. Click the big purple button that says:
+   "📊 Extract Financial Data"
+
+4. Wait 5-10 seconds (you'll see a spinning circle)
+
+5. BOOM! You'll see a table with financial data!
+
+6. You can click "💾 Download CSV" to save it to Excel
+
+7. Click "🔄 New Search" to try a different company
+
+================================================================================
+
+TROUBLESHOOTING
+---------------------------------------
+
+Problem: "Python is not recognized"
+Solution: You forgot to check "Add Python to PATH" in Step 2
+Fix: Uninstall Python, reinstall it, and CHECK THAT BOX!
+
+Problem: "Nothing happens when I double-click START_APP"
+Solution: Right-click the file instead, and click "Run" or "Open"
+
+Problem: "Page can't be reached" in browser
+Solution: Make sure the black window from Step 4 is still open!
+If you closed it, go back to Step 4
+
+Problem: "ModuleNotFoundError" or "No module named..."
+Solution: The app is installing what it needs. Wait a bit longer.
+Close the window and try double-clicking START_APP again.
+
+================================================================================
+
+WHEN YOU'RE DONE
+---------------------------------------
+
+1. Go back to that black window that's still open
+2. Click anywhere in that window
+3. Hold down the "Ctrl" key and press "C" (Ctrl+C)
+4. The window will close
+5. You can close your browser tab too
+
+================================================================================
+
+NEXT TIME YOU WANT TO USE IT
+---------------------------------------
+
+You only need to do Steps 2 (Python install) ONCE!
+
+Next time, just:
+1. Double-click START_APP.bat (or .sh)
+2. Open browser to localhost:5000
+3. Use the app!
+
+That's it!
+
+================================================================================
+
+STILL STUCK?
+---------------------------------------
+
+Take a screenshot of what you see and share it.
+Or tell me exactly what happens when you double-click START_APP
+
+Remember: Everyone starts somewhere! You're doing great! 💪
+
+================================================================================
