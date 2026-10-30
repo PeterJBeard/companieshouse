@@ -141,6 +141,7 @@ def reconcile_printed_pages(pages: list[PageInfo], window: int = 3) -> None:
         after = next((good[q] for q in range(p.page + 1, p.page + 4 * window) if q in good), None)
         if before is not None and before == after and p.page - before > 0:
             p.printed_page, p.printed_page_inferred = str(p.page - before), True
+            good[p.page] = before
         elif p.page in offs:
             p.printed_page = None
 

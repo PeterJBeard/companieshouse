@@ -56,8 +56,8 @@ STATEMENT_TITLES = {
     "cash_flow": "Statement of cash flows",
 }
 TILE_DPI = 110
-RESULT_VERSION = 7
-PAGEMAP_VERSION = 2
+RESULT_VERSION = 8
+PAGEMAP_VERSION = 3
 
 _doc_locks: dict[str, threading.RLock] = {}
 _doc_locks_guard = threading.Lock()

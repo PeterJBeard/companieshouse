@@ -57,6 +57,16 @@ def test_canonical_unit():
     assert canonical_unit("£m") == "£m"
 
 
+@pytest.mark.parametrize("raw,unit", [("£million", "£m"), ("Emllion", "£m"), ("Emillon", "£m"), ("$million", "$m"), ("emllion", "£m")])
+def test_million_headers_as_scanned(raw, unit):
+    assert is_unit(raw) and canonical_unit(raw) == unit
+
+
+@pytest.mark.parametrize("raw", ["members", "Emission", "Notes"])
+def test_words_near_million_are_not_units(raw):
+    assert not is_unit(raw)
+
+
 def test_text_is_not_a_number():
     assert parse_number("Debtors") is None
     assert parse_number("note") is None

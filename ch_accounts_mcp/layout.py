@@ -91,11 +91,27 @@ def is_year(text: str) -> bool:
     return bool(YEAR_RE.match(text.strip()))
 
 
+_MILLION_RE = re.compile(r"^([£$€fEe]?)\s?(m[a-z1|]{4,7})$")
+
+
+def _fuzzy_million(text: str) -> str | None:
+    """'£million' as scans give it ('Emllion', 'Emillon'); returns the currency symbol or None."""
+    from difflib import SequenceMatcher
+
+    m = _MILLION_RE.match(text.strip())
+    if not m or SequenceMatcher(None, m.group(2).replace("1", "l").replace("|", "l"), "million").ratio() < 0.8:
+        return None
+    return {"$": "$", "€": "€"}.get(m.group(1), "£")
+
+
 def is_unit(text: str) -> bool:
-    return bool(UNIT_RE.match(text.strip().replace("’", "'")))
+    return bool(UNIT_RE.match(text.strip().replace("’", "'"))) or _fuzzy_million(text) is not None
 
 
 def canonical_unit(text: str) -> str:
+    cur = _fuzzy_million(text)
+    if cur:
+        return f"{cur}m"
     s = text.strip().replace("’", "'").replace("O", "0")
     if re.fullmatch(r"'?000", s):
         return "£'000"
