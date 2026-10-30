@@ -130,7 +130,7 @@ def has_required_spans(c: dict) -> bool:
     return {"label", "value", "header"}.issubset(roles) and ("unit" in roles or bool(c.get("unit")))
 
 
-def tokens_in_bbox(tokens: list[dict], bbox: list[float], slack: float = 0.6) -> list[dict]:
+def tokens_in_bbox(tokens: list[dict], bbox: list[float], slack: float = 0.1) -> list[dict]:
     x0, y0, x1, y1 = bbox
     out = []
     for t in tokens:
@@ -145,9 +145,24 @@ def _norm_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _reading_order(toks: list[dict]) -> list[dict]:
+    """Lines by vertical centre (a capital's box starts higher than its neighbours'), then left to right."""
+    lines: list[list[dict]] = []
+    for t in sorted(toks, key=lambda t: (t["b"][1] + t["b"][3]) / 2):
+        yc, h = (t["b"][1] + t["b"][3]) / 2, t["b"][3] - t["b"][1]
+        if lines:
+            last = lines[-1]
+            lc = sum((x["b"][1] + x["b"][3]) / 2 for x in last) / len(last)
+            if abs(yc - lc) <= max(h, 2.0) / 2:
+                last.append(t)
+                continue
+        lines.append([t])
+    return [t for ln in lines for t in sorted(ln, key=lambda t: t["b"][0])]
+
+
 def span_matches_tokens(span: dict, tokens: list[dict]) -> bool:
     """Trust test 15.12(1): stored text equals the OCR tokens inside the cited box."""
-    inside = sorted(tokens_in_bbox(tokens, span["bbox"]), key=lambda t: (round(t["b"][1] / 4), t["b"][0]))
+    inside = _reading_order(tokens_in_bbox(tokens, span["bbox"]))
     if span.get("source") == "ink":
         return not inside and span["text"] == "-"
     return _norm_ws(" ".join(t["t"] for t in inside)).replace(" ", "") == _norm_ws(span.get("ocr_text") or span["text"]).replace(" ", "")

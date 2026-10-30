@@ -25,6 +25,7 @@ UNIT_RE = re.compile(
     r"|^US\$('?000|m)?$"
 )
 NOTE_REF_RE = re.compile(r"^\d{1,2}(\([a-z]{1,3}\)|[a-z])?(,\s*\d{1,2}(\([a-z]{1,3}\)|[a-z])?)*,?$")
+_NOTE_PART_RE = re.compile(r"^\d{1,2}(\([a-z]{1,3}\)|[a-z])?,?$")
 
 
 @dataclass
@@ -91,7 +92,7 @@ def is_year(text: str) -> bool:
     return bool(YEAR_RE.match(text.strip()))
 
 
-_MILLION_RE = re.compile(r"^([£$€fEe]?)\s?(m[a-z1|]{4,7})$")
+_MILLION_RE = re.compile(r"^([£$€fEe]?)[il1]?\s?(m[a-z1|]{3,7})$")
 
 
 def _fuzzy_million(text: str) -> str | None:
@@ -99,7 +100,10 @@ def _fuzzy_million(text: str) -> str | None:
     from difflib import SequenceMatcher
 
     m = _MILLION_RE.match(text.strip())
-    if not m or SequenceMatcher(None, m.group(2).replace("1", "l").replace("|", "l"), "million").ratio() < 0.8:
+    if not m:
+        return None
+    word = m.group(2).replace("1", "l").replace("|", "l")
+    if not re.fullmatch(r"m[il]{1,5}[o0]n", word) and SequenceMatcher(None, word, "million").ratio() < 0.8:
         return None
     return {"$": "$", "€": "€"}.get(m.group(1), "£")
 
@@ -376,6 +380,9 @@ def _row_is_header(cells: list[Cell], width: float) -> bool:
         has_unit = any(is_unit(w) for c in texts for w in c.text.split())
         if all(_all_header_words(c.text) or is_unit(c.text) for c in texts) and (in_value_area or has_unit):
             return True
+        n_units = sum(is_unit(c.text) for c in texts)
+        if n_units >= 2 and n_units >= 0.6 * len(texts):
+            return True  # a '£million' row where OCR mangled one of the units ('fimlllon')
         if all(c.x0 > width * 0.40 for c in texts):
             return True
     return False
@@ -553,6 +560,15 @@ def rebuild_page(tokens: list[dict], page: int, width: float, height: float) -> 
         else:
             r.kind = "text"
 
+    # column headings stacked over a unit row ("Called up / share / capital" over "£million")
+    for i, r in enumerate(rows):
+        if r.kind != "header":
+            continue
+        j = i - 1
+        while j >= 0 and rows[j].kind == "text" and rows[j + 1].y0 - rows[j].y1 < 8 and all(c.x0 > width * 0.3 for c in rows[j].cells):
+            rows[j].kind = "header"
+            j -= 1
+
     sections: list[Section] = []
     cur_hdr: list[Row] = []
     cur_rows: list[Row] = []
@@ -627,6 +643,15 @@ def _assign_rows(s: Section, width: float) -> None:
         note_col = next((c for c in s.columns if c.is_note), None)
         for i, c in enumerate(r.cells):
             col = cols.get(c.column) if c.kind == "number" and c.column is not None else None
+            nc = r.note_cell
+            if nc is not None and nc.text.rstrip().endswith(",") and c.x1 < first_x and 0 <= c.x0 - nc.x1 < 15 and _NOTE_PART_RE.match(c.text.strip()):
+                # "25, 27" read as two tokens: the second part belongs to the note, not the label or a column
+                nc.text = f"{nc.text.strip()} {c.text.strip()}"
+                nc.bbox = [min(nc.bbox[0], c.bbox[0]), min(nc.bbox[1], c.bbox[1]), max(nc.bbox[2], c.bbox[2]), max(nc.bbox[3], c.bbox[3])]
+                nc.tokens = nc.tokens + c.tokens
+                c.role = "consumed"
+                r.note = nc.text.rstrip(",")
+                continue
             if c.kind == "text" and NOTE_REF_RE.match(c.text.strip()) and c.x1 < first_x and i > 0 and r.note_cell is None:
                 near_note = note_col is not None and c.x1 >= note_col.x0 - 25 and c.x0 <= note_col.x1 + 25
                 gap = c.x0 - r.cells[i - 1].x1

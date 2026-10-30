@@ -154,6 +154,30 @@ def score_filing(gold: dict, result: dict) -> dict:
     return s
 
 
+def trust_checks(doc) -> dict:
+    """Brief 15.12 (1) and (2) over every figure citation of a real filing."""
+    from ch_accounts_mcp import ocr
+    from ch_accounts_mcp.citations import has_required_spans, span_matches_tokens
+
+    cits = [c for c in doc.citations().values() if c.get("type") == "figure"]
+    tok_sets: dict[int, list[list[dict]]] = {}
+    for c in cits:
+        pg = c["pdf_page"]
+        if pg not in tok_sets:
+            if doc.is_text_page(pg):
+                tok_sets[pg] = [doc.cache.get_json(doc.sha, f"pages/{pg}.tokens.text.json") or []]
+            else:
+                tok_sets[pg] = [x["tokens"] for d in (ocr.FULL_DPI, ocr.REREAD_DPI) if (x := doc.cache.get_json(doc.sha, f"pages/{pg}.tokens.{d}.json"))]
+    spans = bad_spans = 0
+    for c in cits:
+        for s in c["spans"]:
+            spans += 1
+            bad_spans += not any(span_matches_tokens(s, toks) for toks in tok_sets[c["pdf_page"]])
+    labelled = [c for c in cits if c["label"]]
+    missing = sum(not has_required_spans(c) for c in labelled)
+    return {"figure_citations": len(cits), "spans": spans, "spans_not_matching_tokens": bad_spans, "labelled_citations": len(labelled), "citations_missing_required_spans": missing}
+
+
 def _call(server, name: str, args: dict) -> dict:
     res = asyncio.run(server.mcp.call_tool(name, args))
     content = res[0] if isinstance(res, tuple) else res
@@ -227,6 +251,7 @@ def main() -> None:
                 if scores is None:
                     result = pipeline.Document.open(loaded["doc_id"]).primary_statements()[0]
                     scores = score_filing(gold, result)
+                    scores["trust"] = trust_checks(pipeline.Document.open(loaded["doc_id"]))
                     scores.update(pages=loaded["page_count"], document_type=loaded["document_type"], doc_summary=prim["verification"]["summary"])
             for _ in range(args.warm):
                 t = time.perf_counter()
@@ -240,6 +265,9 @@ def main() -> None:
             print(f"{stem:24s} {scores['pages']:3d}pp {scores['document_type']:8s} gold={scores['gold_figures']:3d}  precision={_fmt(scores['precision'])}  recall={_fmt(scores['recall'])}  "
                   f"any-status={_fmt(scores['accuracy_any_status'])}  unverified={_fmt(scores['share_unverified'])}  verified-wrong={scores['verified_wrong']}  "
                   f"cold load {t_load / 1000:.1f}s + primary {t_prim / 1000:.1f}s")
+            tr = scores["trust"]
+            print(f"{'':24s} trust 15.12(1): {tr['spans'] - tr['spans_not_matching_tokens']}/{tr['spans']} spans equal the OCR tokens in their box; "
+                  f"15.12(2): {tr['labelled_citations'] - tr['citations_missing_required_spans']}/{tr['labelled_citations']} labelled figure citations carry label, value, header and unit")
     override_settings(base)
     reset_cache(base.cache_dir)
 

@@ -57,7 +57,7 @@ def test_canonical_unit():
     assert canonical_unit("£m") == "£m"
 
 
-@pytest.mark.parametrize("raw,unit", [("£million", "£m"), ("Emllion", "£m"), ("Emillon", "£m"), ("$million", "$m"), ("emllion", "£m")])
+@pytest.mark.parametrize("raw,unit", [("£million", "£m"), ("Emllion", "£m"), ("Emillon", "£m"), ("$million", "$m"), ("emllion", "£m"), ("Emion", "£m"), ("fimlllon", "£m")])
 def test_million_headers_as_scanned(raw, unit):
     assert is_unit(raw) and canonical_unit(raw) == unit
 
@@ -261,3 +261,14 @@ def test_printed_page_numbers_reconciled_with_neighbours():
     got = {p.page: (p.printed_page, p.printed_page_inferred) for p in pages}
     assert got[26] == ("24", True) and got[24] == ("22", True) and got[23] == ("21", True)
     assert got[28] == ("26", False) and got[20] == ("18", False)
+
+
+def test_two_part_note_reference_stays_out_of_the_label():
+    lines = [
+        (100, [L(330, "Notes"), R(440, "2024"), R(520, "2023")]),
+        (112, [R(440, "£m"), R(520, "£m")]),
+        (130, [L(60, "Remeasurement losses on pension plans"), L(325, "25,"), L(343, "27"), R(440, "(1,056)"), R(520, "(402)")]),
+        (145, [L(60, "Tax on items not reclassified"), L(330, "27"), R(440, "267"), R(520, "101")]),
+    ]
+    rows = [r for r in _layout(lines).sections[0].rows if r.values]
+    assert rows[0].label == "Remeasurement losses on pension plans" and rows[0].note == "25, 27"
