@@ -2,6 +2,8 @@
 
 A Python application that extracts financial information from Companies House PDF accounts.
 
+> **MCP server:** the newer `ch_accounts_mcp` package in this repository serves audited accounts (including scanned filings) to Claude and other MCP clients, with arithmetic verification and a citation on every figure. See [`ch_accounts_mcp/README.md`](ch_accounts_mcp/README.md). The app described below is separate and unchanged.
+
 ## Features
 
 - Fetch PDF accounts from Companies House API

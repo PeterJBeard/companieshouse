@@ -1,0 +1,93 @@
+{
+  "name": "Mott MacDonald Group Limited, group accounts to 31 December 2024",
+  "company_number": "01110949",
+  "transaction_id": "MzQ4MTk4MDYzOGFkaXF6a2N4",
+  "sha256": "e19126b4ac748694e662ca68ccaf3ac048ddd0af907d772d20c4f1e9b22b091d",
+  "framework": "FRS 102 (full, group)",
+  "scan": "image-only PDF, no text layer; running headers and DocuSign envelope lines on every page",
+  "keyed_by": "Hand-keyed by the build agent from 125 DPI page renders, not from OCR output. Each row is [label, current year, prior year]; null means blank; 0 is a dash; an empty label is an unlabelled subtotal.",
+  "pages": [
+    {
+      "pdf_page": 44, "statement": "income_statement", "scope": "group", "unit": "£'000", "years": [2024, 2023],
+      "rows": [
+        ["Gross revenue", 2518138, 2373827],
+        ["Cost of sales", -1546179, -1451690],
+        ["Gross profit", 971959, 922137],
+        ["Administrative expenses", -871290, -830208],
+        ["Operating profit", 100669, 91929],
+        ["Other income", 8529, 6632],
+        ["Income from other fixed asset investments", 4, 3],
+        ["Income from current asset investments", 1780, 2136],
+        ["Profit on ordinary activities before interest", 110982, 100700],
+        ["Net interest receivable", 10107, 10205],
+        ["Other finance income", 2187, 2007],
+        ["Profit on ordinary activities before taxation", 123276, 112912],
+        ["Tax on profit on ordinary activities", -34705, -27066],
+        ["Profit on ordinary activities after taxation", 88571, 85846],
+        ["Owners of the parent company", 88635, 85828],
+        ["Non-controlling interests", -64, 18],
+        ["", 88571, 85846],
+        ["Profit for the financial year", 88571, 85846],
+        ["Exchange adjustments on translation of net assets of overseas subsidiaries", -1266, -2932],
+        ["Net actuarial loss on pension schemes", -554, -9970],
+        ["Tax on net actuarial loss", 121, 2318],
+        ["Tax on additional pension contributions", -41, -42],
+        ["Change in restriction of pension asset recognised - gross", -7858, -11151],
+        ["Change in restriction of pension asset recognised - tax thereon", 1938, 2593],
+        ["Total other comprehensive expense", -7660, -19184],
+        ["Total comprehensive income for the year", 80911, 66662],
+        ["Owners of the parent company", 80976, 66653],
+        ["Non-controlling interests", -65, 9],
+        ["", 80911, 66662]
+      ]
+    },
+    {
+      "pdf_page": 45, "statement": "balance_sheet", "scope": "group", "unit": "£'000", "years": [2024, 2023],
+      "rows": [
+        ["Intangible assets", 7618, 12067],
+        ["Tangible assets", 92125, 67170],
+        ["Other fixed asset investments", 53, 190],
+        ["", 99796, 79427],
+        ["Debtors", 614638, 581427],
+        ["Current asset investments", 42659, 36121],
+        ["Cash at bank and in hand", 415930, 389389],
+        ["", 1073227, 1006937],
+        ["Creditors: amounts falling due within one year", -602664, -607022],
+        ["Net current assets", 470563, 399915],
+        ["Total assets less current liabilities", 570359, 479342],
+        ["Creditors: amounts falling due after more than one year", -10300, -10119],
+        ["Provisions for liabilities", -69863, -51072],
+        ["Net assets excluding pension liability", 490196, 418151],
+        ["Pension liability", 0, -593],
+        ["Net assets including pension liability", 490196, 417558],
+        ["Called up share capital", 11713, 11713],
+        ["Share premium account", 17717, 17717],
+        ["Revaluation reserve", 814, 814],
+        ["Investment in own shares", -17113, -14695],
+        ["Profit and loss account", 476932, 401810],
+        ["Equity attributable to owners of the parent company", 490063, 417359],
+        ["Non-controlling interests", 133, 199],
+        ["Total capital and reserves", 490196, 417558]
+      ]
+    },
+    {
+      "pdf_page": 46, "statement": "balance_sheet", "scope": "company", "unit": "£'000", "years": [2024, 2023],
+      "rows": [
+        ["Investment in subsidiary undertakings", 332221, 347221],
+        ["Debtors", 27003, 70333],
+        ["Cash at bank and in hand", 88, 1],
+        ["", 27091, 70334],
+        ["Creditors: amounts falling due within one year", -20, -57],
+        ["Net current assets", 27071, 70277],
+        ["Total assets less current liabilities", 359292, 417498],
+        ["Creditors: amounts falling due after more than one year", -185000, -250000],
+        ["Net assets", 174292, 167498],
+        ["Called up share capital", 11713, 11713],
+        ["Share premium account", 17717, 17717],
+        ["Revaluation reserve", 2733, 2733],
+        ["Profit and loss account", 142129, 135335],
+        ["Shareholders' equity", 174292, 167498]
+      ]
+    }
+  ]
+}

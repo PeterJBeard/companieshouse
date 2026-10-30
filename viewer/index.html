@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filing viewer</title>
+<link rel="stylesheet" href="/viewer/viewer.css">
+</head>
+<body>
+<header id="banner">
+  <div class="who">
+    <span id="company" class="company">Loading…</span>
+    <span id="number" class="meta"></span>
+    <span id="madeup" class="meta"></span>
+    <span id="atype" class="meta"></span>
+  </div>
+  <div class="links">
+    <a id="chlink" target="_blank" rel="noopener">Companies House filing ↗</a>
+    <span id="sha" class="sha" title="SHA-256 of the stored PDF"></span>
+  </div>
+</header>
+<div id="app">
+  <aside id="list">
+    <div class="progress"><div id="bar"></div><span id="progress-text"></span></div>
+    <div class="filters">
+      <label><input type="radio" name="flt" value="all" checked> All</label>
+      <label><input type="radio" name="flt" value="unverified"> Unverified</label>
+      <label><input type="radio" name="flt" value="flagged"> Flagged</label>
+      <label><input type="radio" name="flt" value="page"> This page</label>
+    </div>
+    <ul id="items"></ul>
+    <div class="keys"><b>n</b>/<b>p</b> next/previous · <b>space</b> reviewed · <b>f</b> flag · <b>t</b> tie-out trail</div>
+  </aside>
+  <main id="doc">
+    <div class="pagebar">
+      <button id="prev" title="Previous page">◀</button>
+      <span id="pageinfo"></span>
+      <button id="next" title="Next page">▶</button>
+      <label class="trail"><input type="checkbox" id="trail"> Tie-out trail</label>
+      <span id="legend"></span>
+    </div>
+    <div id="stage"><img id="pageimg" alt="page image"><svg id="overlay"></svg></div>
+  </main>
+  <aside id="detail">
+    <div id="detail-empty">Select a citation to see its source, checks and crop.</div>
+    <div id="detail-body" hidden>
+      <div id="d-prov" class="prov"></div>
+      <h2 id="d-label"></h2>
+      <div class="fig"><span id="d-raw"></span> <span id="d-unit"></span></div>
+      <table class="facts">
+        <tr><th>Column</th><td id="d-col"></td></tr>
+        <tr><th>Scope / period</th><td id="d-scope"></td></tr>
+        <tr><th>Page</th><td id="d-page"></td></tr>
+        <tr><th>Verbatim</th><td id="d-verbatim" class="verbatim"></td></tr>
+        <tr><th>Verification</th><td id="d-vstatus"></td></tr>
+        <tr><th>OCR confidence</th><td id="d-conf"></td></tr>
+        <tr><th>Citation</th><td id="d-cid" class="mono"></td></tr>
+      </table>
+      <h3>Checks</h3>
+      <ul id="d-checks"></ul>
+      <h3>Crop</h3>
+      <img id="d-crop" alt="crop of the cited row">
+      <div class="review">
+        <button id="btn-review">Mark reviewed (space)</button>
+        <button id="btn-flag">Flag (f)</button>
+      </div>
+    </div>
+  </aside>
+</div>
+<script>window.VIEWER_CONFIG = /*__CONFIG__*/null;</script>
+<script src="/viewer/viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+{
+  "name": "Boots UK Limited, company accounts to 31 August 2024",
+  "company_number": "00928555",
+  "transaction_id": "MzQ2ODc3MjY3NWFkaXF6a2N4",
+  "sha256": "1dc9200f8b8b67edc1241190482606dad520c2d70795c952e277435c289a260b",
+  "framework": "FRS 101 (company only, IFRS-format statements)",
+  "scan": "image-only PDF, no text layer",
+  "keyed_by": "Hand-keyed by the build agent from 125 DPI page renders, not from OCR output; every subtotal was cast by hand. Each row is [label, current year, prior year]; null means blank in the filing; 0 means a dash; an empty label is an unlabelled subtotal.",
+  "pages": [
+    {
+      "pdf_page": 24, "statement": "income_statement", "scope": "company", "unit": "£m", "years": [2024, 2023],
+      "rows": [
+        ["Revenue", 7313, 7053],
+        ["Cost of sales", -4632, -4506],
+        ["Gross profit", 2681, 2547],
+        ["Other operating income", 13, 18],
+        ["Past service pension credit", 219, 0],
+        ["Distribution costs", -2249, -2151],
+        ["Administrative expenses", -390, -326],
+        ["Operating profit", 274, 88],
+        ["Income from shares in Group undertakings and associates", 67, 7],
+        ["Finance income", 25, 43],
+        ["Finance costs", -97, -78],
+        ["Profit before taxation", 269, 60],
+        ["Taxation", -58, -13],
+        ["Profit for the year", 211, 47]
+      ]
+    },
+    {
+      "pdf_page": 25, "statement": "income_statement", "scope": "company", "unit": "£m", "years": [2024, 2023],
+      "rows": [
+        ["Profit for the year", 211, 47],
+        ["Remeasurement losses on defined benefit pension plans", -1056, -402],
+        ["Fair value loss on investments in equity instruments designated at FVTOCI", -41, -2],
+        ["Tax on items that will not be reclassified subsequently to income statement", 267, 101],
+        ["", -830, -303],
+        ["Remeasurement losses on foreign currency options", 0, -1],
+        ["", 0, -1],
+        ["Total comprehensive expense for the year", -619, -257]
+      ]
+    },
+    {
+      "pdf_page": 26, "statement": "balance_sheet", "scope": "company", "unit": "£m", "years": [2024, 2023],
+      "rows": [
+        ["Intangible assets", 666, 855],
+        ["Property, plant and equipment", 495, 545],
+        ["Right-of-use assets", 1266, 1396],
+        ["Investments in subsidiaries", 8, 14],
+        ["Interests in associates and joint ventures", 14, 14],
+        ["Other equity investments", 66, 107],
+        ["Deferred tax assets", 119, 0],
+        ["Trade and other receivables", 11, 1],
+        ["Defined benefit pension asset", 0, 210],
+        ["", 2645, 3142],
+        ["Inventories", 699, 705],
+        ["Current tax assets", 34, 50],
+        ["Trade and other receivables", 980, 1059],
+        ["Assets held for sale", 4, 8],
+        ["Cash and bank balances", 55, 30],
+        ["", 1772, 1852],
+        ["Total assets", 4417, 4994],
+        ["Trade and other payables", -1629, -1666],
+        ["Lease liabilities", -175, -191],
+        ["Provisions", -6, -20],
+        ["", -1810, -1877],
+        ["Net current liabilities", -38, -25],
+        ["Total assets less current liabilities", 2607, 3117],
+        ["Trade and other payables", -4, -5],
+        ["Lease liabilities", -1388, -1474],
+        ["Long term provisions", -42, -26],
+        ["Defined benefit pension liability", -307, 0],
+        ["Deferred tax liabilities", 0, -69],
+        ["", -1741, -1574],
+        ["Total liabilities", -3551, -3451],
+        ["Net assets", 866, 1543],
+        ["Called up share capital", 710, 710],
+        ["Actuarial reserve", -672, 117],
+        ["Investment revaluation reserve", -128, -87],
+        ["Retained earnings", 956, 803],
+        ["Total equity", 866, 1543]
+      ]
+    }
+  ]
+}

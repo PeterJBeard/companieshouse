@@ -1,0 +1,78 @@
+{
+  "name": "Tesco Stores Limited, company accounts to 22 February 2025",
+  "company_number": "00519500",
+  "transaction_id": "MzQ4NDU4MDA5OGFkaXF6a2N4",
+  "sha256": "25b906f062a7eed6cb697ab4f21b04b875697db0b67e9a447483870699afca0b",
+  "framework": "FRS 101 (company only)",
+  "scan": "image-only PDF, no text layer",
+  "keyed_by": "Hand-keyed by the build agent from 125 DPI page renders, not from OCR output. Each row is [label, current year, prior year]; null means blank in the filing; 0 means a dash; an empty label is an unlabelled subtotal.",
+  "pages": [
+    {
+      "pdf_page": 21, "statement": "income_statement", "scope": "company", "unit": "£m", "years": [2025, 2024],
+      "rows": [
+        ["Revenue", 50837, 49247],
+        ["Cost of sales", -47452, -46208],
+        ["Gross profit", 3385, 3039],
+        ["Administrative expenses", -1410, -1241],
+        ["Operating profit", 1975, 1798],
+        ["Interest receivable and similar income", 101, 105],
+        ["Interest payable and similar charges", -416, -434],
+        ["Profit before taxation", 1660, 1469],
+        ["Tax charge on profit", -401, -336],
+        ["Profit for the financial period", 1259, 1133]
+      ]
+    },
+    {
+      "pdf_page": 22, "statement": "income_statement", "scope": "company", "unit": "£m", "years": [2025, 2024],
+      "rows": [
+        ["Profit for the financial period", 1259, 1133],
+        ["Actuarial gain/(loss) on defined benefit pension plan", 335, -276],
+        ["Income tax (charge)/credit relating to items not reclassified", -84, 69],
+        ["Net fair value loss on inventory cash flow hedges", -8, -49],
+        ["Income tax (charge)/credit relating to cash flow hedges", -3, 2],
+        ["Other comprehensive income/(loss) for the financial period, net of tax", 240, -254],
+        ["Total comprehensive income for the financial period", 1499, 879]
+      ]
+    },
+    {
+      "pdf_page": 23, "statement": "balance_sheet", "scope": "company", "unit": "£m", "years": [2025, 2024],
+      "rows": [
+        ["Intangible assets", 635, 611],
+        ["Tangible assets", 11196, 11183],
+        ["Right of use assets", 4713, 4721],
+        ["Investment properties", 8, 9],
+        ["Investments", 0, 0],
+        ["Debtors: amounts falling due after more than one year", 1109, 305],
+        ["Deferred tax assets", 0, 162],
+        ["", 17661, 16991],
+        ["Stocks", 1758, 1593],
+        ["Debtors: amounts falling due within one year", 565, 1104],
+        ["Derivative financial instruments", 14, 3],
+        ["Current tax assets", 20, 79],
+        ["Cash and cash equivalents", 696, 673],
+        ["", 3053, 3452],
+        ["Assets classified as held for sale", 50, 23],
+        ["", 3103, 3475],
+        ["Creditors: amounts falling due within one year", -8037, -8063],
+        ["Lease liabilities", -496, -468],
+        ["Provisions for liabilities", -159, -152],
+        ["Derivative financial instruments", -5, -16],
+        ["", -8697, -8699],
+        ["Net current liabilities", -5594, -5224],
+        ["Total assets less current liabilities", 12067, 11767],
+        ["Creditors: amounts falling due after more than one year", -6, -5],
+        ["Lease liabilities", -6510, -6633],
+        ["Provisions for liabilities", -94, -109],
+        ["Deferred tax liabilities", -24, 0],
+        ["Post-employment benefit deficit", -307, -618],
+        ["", -6941, -7365],
+        ["Net assets", 5126, 4402],
+        ["Called up share capital", 1325, 1325],
+        ["Share premium", 241, 241],
+        ["Cash flow hedge reserve", 4, -7],
+        ["Profit and loss account", 3556, 2843],
+        ["Total shareholders' funds", 5126, 4402]
+      ]
+    }
+  ]
+}
