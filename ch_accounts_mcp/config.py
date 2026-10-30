@@ -14,6 +14,26 @@ def _int(name: str, default: int) -> int:
         return default
 
 
+_PLACEHOLDER_VALUES = {"", "your_api_key_here", "changeme"}
+
+
+def _load_dotenv(path: Path | None = None) -> None:
+    """Fill unset variables from a .env file. Never overrides the environment, never logs values."""
+    path = path or Path.cwd() / ".env"
+    try:
+        text = path.read_text()
+    except OSError:
+        return
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and value.lower() not in _PLACEHOLDER_VALUES:
+            os.environ.setdefault(key, value)
+
+
 @dataclass(frozen=True)
 class Settings:
     companies_house_api_key: str | None = field(repr=False, default=None)
@@ -41,6 +61,7 @@ class Settings:
 
 
 def load_settings() -> Settings:
+    _load_dotenv()
     device = os.environ.get("OCR_DEVICE", "cpu").lower()
     default_engine = "paddleocr" if device == "cuda" else "rapidocr"
     port = _int("VIEWER_PORT", 8765)

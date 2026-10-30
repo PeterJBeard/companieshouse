@@ -31,8 +31,11 @@ Python 3.11 or later. From the repository root:
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"          # or: pip install -r requirements-mcp.txt
+cp .env.example .env             # then put your key in .env; the file is gitignored
 python -m pytest tests           # unit tests (no network, no OCR models needed)
 ```
+
+A `.env` in the working directory is read at start-up. It uses the same names as the environment variables, it never overrides a variable that is already set, and its values are never logged or returned. The placeholder `your_api_key_here` is treated as unset.
 
 Install in editable mode (`-e`) or run from the checkout, because the viewer's static files live in `viewer/` next to the package.
 
@@ -276,10 +279,10 @@ Labels are returned exactly as OCR read them ("Deferred tax lialtles") because c
 | 5 | Citation objects and crops on every figure | Done | Deterministic ids; spans in PDF points; crops of row plus header strip at 200 DPI; pinned to the document hash. |
 | 6 | MCP server: `load_accounts`, `get_primary_statements`, `get_citation`, `get_page_image` over stdio and streamable HTTP | Done | Bearer auth on HTTP, refusal to serve unauthenticated on a public interface, secrets scrubbed from errors and logs. |
 | 7 | Highlight viewer with deep links and tie-out trail | Done (side-by-side answer mode not built) | Banner, strong/light highlights with connectors, trail, keyboard review, progress, signed links, pre-rendered tiles. |
-| 8 | Companies House client and caching | Done | API client (key optional) and public-page fallback; S3 redirect followed without credentials; shared token bucket; content-addressed cache, transaction id to hash map, integrity check, extraction log with tool and OCR model versions. |
+| 8 | Companies House client and caching | Done | API client (key optional) and public-page fallback; S3 redirect followed without credentials; shared token bucket; content-addressed cache, transaction id to hash map, integrity check, extraction log with tool and OCR model versions. Checked with a live key: company search, filing history, and the document download is byte-for-byte the same PDF as the public site for every gold filing. |
 | 9 | Notes, audit report, sections, search | Done (first version) | Measured on JCB: auditor, senior statutory auditor and opinion found; notes index 1-30. Not yet covered by the gold set. |
 | 10 | `check_answer`, `compute`, `export_workpaper` | Done (first version) | Unit tests include trust test 5 (planted numbers caught). |
-| 11 | iXBRL shortcut | Not started | |
+| 11 | iXBRL shortcut | Not started | The live document API offers PDF only for the four gold filings and for Tesco PLC (HTTP 406 for XHTML), so those filings have no iXBRL to parse. |
 | 12 | Gold set, benchmark, usability test, GPU deployment | Partial | 4 scanned filings, 470 figures, `bench.py`. No usability test, no GPU deployment, no container image. |
 
 ### Acceptance criteria (section 13)

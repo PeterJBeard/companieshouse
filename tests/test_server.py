@@ -60,6 +60,19 @@ def test_errors_are_json_and_never_leak_secrets(tmp_settings):
     assert "error" in body
 
 
+def test_dotenv_fills_missing_settings_and_ignores_placeholders(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("COMPANIES_HOUSE_API_KEY", raising=False)
+    monkeypatch.setenv("OCR_WORKERS", "7")
+    (tmp_path / ".env").write_text("COMPANIES_HOUSE_API_KEY=from-file\nOCR_WORKERS=2\nANTHROPIC_API_KEY=your_api_key_here\n")
+    from ch_accounts_mcp.config import load_settings
+
+    s = load_settings()
+    assert s.companies_house_api_key == "from-file"
+    assert s.ocr_workers == 7  # an already-set variable wins
+    assert s.anthropic_api_key is None
+
+
 def test_settings_repr_hides_secrets():
     s = dataclasses.replace(settings(), companies_house_api_key="abc-secret", mcp_bearer_token="tok-secret")
     assert "abc-secret" not in repr(s) and "tok-secret" not in repr(s)
