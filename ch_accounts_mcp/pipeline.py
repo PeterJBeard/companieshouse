@@ -23,6 +23,7 @@ from .triage import (
     build_notes_index,
     build_page_map,
     classify_page,
+    header_page_number,
     note_heading_candidates,
     page_ranges,
     printed_page_number,
@@ -54,7 +55,7 @@ STATEMENT_TITLES = {
     "cash_flow": "Statement of cash flows",
 }
 TILE_DPI = 110
-RESULT_VERSION = 3
+RESULT_VERSION = 5
 
 _doc_locks: dict[str, threading.RLock] = {}
 _doc_locks_guard = threading.Lock()
@@ -210,7 +211,7 @@ class Document:
             c = classify_page(toks, h)
             if c:
                 info.kind, info.scope, info.heading = c
-            info.printed_page = printed_page_number(bottom, w)
+            info.printed_page = printed_page_number(bottom, w) or header_page_number(toks, h)
             infos.append(info)
             cands.append((p, toks, w))
         build_page_map(infos)

@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from .triage import is_running_header
+
 # --------------------------------------------------------------------------- number parsing
 
 NUM_RE1 = re.compile(r"^\(?-?[£$€]?\s?\d{1,3}(,\d{3})*(\.\d+)?\)?$")
@@ -16,7 +18,13 @@ DASHES = {"-", "–", "—", "−", "--"}
 _CONFUSABLE = str.maketrans({"O": "0", "o": "0", "l": "1", "I": "1", "S": "5", "B": "8"})
 _CURRENCY_LEAD = re.compile(r"^(\(?)(?:[£$€]|f|E)(?=\d)")
 YEAR_RE = re.compile(r"^(19|20)\d{2}$")
-UNIT_RE = re.compile(r"^(£|\$|€|f|E)\s*('?0{3}|m|bn|million|k)?$|^(£|f|E)'?000$|^\$?m$|^US\$('?000|m)?$|^€('?000|m)$", re.I)
+UNIT_RE = re.compile(
+    r"^[£$€]$"
+    r"|^[£$€fE]\s?('?[0O]{3}|m|bn|million|k)$"
+    r"|^'?[0O]{3}$"  # "£'000" with the currency symbol lost by OCR
+    r"|^US\$('?000|m)?$"
+)
+NOTE_REF_RE = re.compile(r"^\d{1,2}(\([a-z]{1,3}\)|[a-z])?(,\s*\d{1,2}(\([a-z]{1,3}\)|[a-z])?)*,?$")
 
 
 @dataclass
@@ -31,7 +39,7 @@ class ParsedNumber:
 def normalise_numeric(raw: str) -> tuple[str, bool] | None:
     """Return (canonical numeric string, substituted) or None if the token is not numeric."""
     s = raw.strip().replace(" ", "")
-    if not s:
+    if not s or re.fullmatch(r"'?[0O]{3}", s):
         return None
     if s in DASHES or re.fullmatch(r"\(?[-–—−]\)?", s):
         return "-", False
@@ -86,7 +94,9 @@ def is_unit(text: str) -> bool:
 
 
 def canonical_unit(text: str) -> str:
-    s = text.strip().replace("’", "'")
+    s = text.strip().replace("’", "'").replace("O", "0")
+    if re.fullmatch(r"'?000", s):
+        return "£'000"
     s = re.sub(r"^[fE](?=('?000|m|bn|k)?$)", "£", s)
     s = s.replace("£000", "£'000").replace("$000", "$'000").replace("€000", "€'000")
     return {"£m": "£m", "m": "£m"}.get(s, s)
@@ -118,6 +128,7 @@ class Cell:
     num: ParsedNumber | None = None
     column: int | None = None
     role: str = "label"  # label | note | value | header | other
+    ocr_text: str | None = None  # set when text was corrected from the raw OCR reading
 
     @property
     def x0(self) -> float:
@@ -296,7 +307,9 @@ def _row_is_header(cells: list[Cell], width: float) -> bool:
         if not others or all(c.x0 > width * 0.35 for c in others) or len(nums) >= 2:
             return True
     if not nums and texts:
-        if all(_all_header_words(c.text) or is_unit(c.text) for c in texts):
+        in_value_area = all(c.x0 > width * 0.3 for c in texts)
+        has_unit = any(is_unit(w) for c in texts for w in c.text.split())
+        if all(_all_header_words(c.text) or is_unit(c.text) for c in texts) and (in_value_area or has_unit):
             return True
         if all(c.x0 > width * 0.40 for c in texts):
             return True
@@ -350,13 +363,12 @@ def label_header(cols: list[Column], header_rows: list[Row]) -> str | None:
     years, scopes, units, notes, texts = [], [], [], [], []
     for r in header_rows:
         for c in r.cells:
-            parts = c.text.replace("’", "'").split()
-            if len(c.tokens) > 1 and all(is_year(p) or is_unit(p) or _HEADER_WORDS.match(p) for p in parts):
-                pieces = [(t, t["t"]) for t in c.tokens]
-            else:
-                pieces = [(None, c.text)]
-            for tok, text in pieces:
-                cell = Cell(text, list(tok["b"]) if tok else c.bbox, tok["c"] if tok else c.conf, [tok] if tok else c.tokens, role="header")
+            # one token at a time: words of neighbouring column headings are often close enough to merge
+            for tok in c.tokens:
+                text = tok["t"]
+                if re.fullmatch(r"\(?[ivx]*\)?|\*+", text.strip()):
+                    continue  # footnote markers such as (i)
+                cell = Cell(text, list(tok["b"]), tok["c"], [tok], role="header")
                 s = text.strip().lower()
                 if is_year(s):
                     years.append(cell)
@@ -364,9 +376,9 @@ def label_header(cols: list[Column], header_rows: list[Row]) -> str | None:
                     units.append(cell)
                 elif re.fullmatch(r"notes?", s):
                     notes.append(cell)
-                elif re.search(r"\b(group|consolidated)\b", s):
+                elif re.fullmatch(r"(the )?(group|consolidated)", s) and len(c.text.split()) <= 3:
                     scopes.append(("group", cell))
-                elif re.search(r"\b(company|parent)\b", s):
+                elif re.fullmatch(r"(the )?(company|parent)", s) and len(c.text.split()) <= 3:
                     scopes.append(("company", cell))
                 else:
                     texts.append(cell)
@@ -393,19 +405,21 @@ def label_header(cols: list[Column], header_rows: list[Row]) -> str | None:
             sc, cell = min(scopes, key=lambda s: abs((s[1].x0 + s[1].x1) / 2 - cx))
             col.scope = sc
             col.header_cells.append(cell)
-        own = [t for t in texts if t.x1 >= col.x0 - 8 and t.x0 <= col.x1 + 8]
+    # Each heading word goes to one column: numbers are right-aligned and headings rarely run past the
+    # right edge of their numbers, so pick the nearest column whose right edge is at or beyond the word's.
+    owned: dict[int, list[Cell]] = {}
+    for t in texts:
+        right = [c for c in value_cols if c.x1 + 6 >= t.x1]
+        best = min(right, key=lambda c: c.x1 - t.x1) if right else None
+        if best is not None and best.x1 - t.x1 < 70 and t.x1 > best.x0 - 60:
+            owned.setdefault(best.index, []).append(t)
+    for col in value_cols:
+        own = owned.get(col.index, [])
         if own:
             col.header_cells.extend(own)
-            col.header_text = " ".join(t.text for t in sorted(own, key=lambda t: (t.bbox[1], t.x0)))
+            col.header_text = " ".join(t.text for t in sorted(own, key=lambda t: (round(t.bbox[1] / 4), t.x0)))
             if re.search(r"restated", col.header_text, re.I):
                 col.restated = True
-    # text headers that sit above several columns (statement of changes in equity) go to the nearest column
-    for t in texts:
-        if not any(t in c.header_cells for c in value_cols):
-            col = _nearest(value_cols, (t.x0 + t.x1) / 2)
-            if col is not None and abs((col.x0 + col.x1) / 2 - (t.x0 + t.x1) / 2) < 45:
-                col.header_cells.append(t)
-                col.header_text = (col.header_text + " " + t.text).strip()
     yrs = [c.year for c in value_cols if c.year]
     current = max(yrs) if yrs else None
     unit_counts: dict[str, int] = {}
@@ -460,7 +474,12 @@ def rebuild_page(tokens: list[dict], page: int, width: float, height: float) -> 
     # header and section detection
     for r in rows:
         nums = [c for c in r.cells if c.kind == "number" and c.x1 > width * 0.3]
-        if r.y0 > height * 0.9 and len(r.cells) == 1 and r.cells[0].kind == "number" and r.cells[0].num and r.cells[0].num.decimals == 0 and abs(r.cells[0].num.value) < 1000:
+        row_text = " ".join(c.text for c in r.cells)
+        if (r.y0 < height * 0.1 and (is_running_header(row_text) or row_text.lower().startswith("docusign envelope"))) or (
+            r.y0 > height * 0.9 and re.search(r"\bpage\b", row_text, re.I) and len(row_text) < 25
+        ):
+            r.kind = "footer"
+        elif r.y0 > height * 0.9 and len(r.cells) == 1 and r.cells[0].kind == "number" and r.cells[0].num and r.cells[0].num.decimals == 0 and abs(r.cells[0].num.value) < 1000:
             r.kind = "footer"
         elif _row_is_header(r.cells, width):
             r.kind = "header"
@@ -496,9 +515,16 @@ def rebuild_page(tokens: list[dict], page: int, width: float, height: float) -> 
     units = []
     for s in sections:
         data_cells = [c for r in s.rows if r.kind == "data" for c in r.cells if c.kind == "number"]
-        hdr_years = [c for r in s.header_rows for c in r.cells if c.kind == "number"]
-        cols = cluster_columns(data_cells, width)
-        _ = hdr_years
+        # unit headings ("£m") sit right-aligned over each value column, so they anchor sparse columns
+        anchors = [Cell(t["t"], list(t["b"]), t["c"], [t], role="header") for r in s.header_rows for c in r.cells for t in c.tokens if is_unit(t["t"])]
+        cols = cluster_columns(data_cells + anchors, width)
+        for col in cols:
+            col.members = [m for m in col.members if m.role != "header"]
+        cols = [c for c in cols if c.members]
+        for i, col in enumerate(cols):
+            col.index = i
+            col.x0 = min(m.x0 for m in col.members)
+            col.x1 = max(m.x1 for m in col.members)
         for r in s.rows:
             if r.kind != "data":
                 continue
@@ -533,8 +559,16 @@ def _assign_rows(s: Section, width: float) -> None:
     first_x = min((c.x0 for c in value_cols), default=width)
     for r in s.rows:
         r.values, r.label_cells, r.note, r.note_cell = {}, [], None, None
-        for c in r.cells:
+        note_col = next((c for c in s.columns if c.is_note), None)
+        for i, c in enumerate(r.cells):
             col = cols.get(c.column) if c.kind == "number" and c.column is not None else None
+            if c.kind == "text" and NOTE_REF_RE.match(c.text.strip()) and c.x1 < first_x and i > 0 and r.note_cell is None:
+                near_note = note_col is not None and c.x1 >= note_col.x0 - 25 and c.x0 <= note_col.x1 + 25
+                gap = c.x0 - r.cells[i - 1].x1
+                if near_note or gap > 18:
+                    c.role = "note"
+                    r.note, r.note_cell = c.text.strip().rstrip(","), c
+                    continue
             if col is not None and col.is_note:
                 c.role = "note"
                 r.note, r.note_cell = c.text, c
@@ -555,6 +589,7 @@ def _assign_rows(s: Section, width: float) -> None:
         r.label = " ".join(c.text for c in r.label_cells).strip()
         if r.values and r.kind != "data":
             r.kind = "data"
+    _fix_misread_thousands(s)
     # join wrapped labels
     rows = s.rows
     for i in range(1, len(rows)):
@@ -568,6 +603,27 @@ def _assign_rows(s: Section, width: float) -> None:
             r.label_cells = p.label_cells + r.label_cells
             r.label = (p.label + " " + r.label).strip()
             p.kind = "consumed"
+
+
+def _fix_misread_thousands(s: Section) -> None:
+    """'27.066' in a column of whole numbers is a thousands comma read as a full stop."""
+    by_key: dict[str, list[Cell]] = {}
+    for r in s.rows:
+        for k, c in r.values.items():
+            if c.num is not None:
+                by_key.setdefault(k, []).append(c)
+    for cells in by_key.values():
+        whole = sum(1 for c in cells if c.num.decimals == 0 and not c.num.is_dash)
+        if whole < 3:
+            continue
+        for c in cells:
+            if c.num.decimals == 3 and c.num.raw.count(".") == 1 and "," not in c.num.raw:
+                corrected = c.text.replace(".", ",")
+                fixed = parse_number(corrected)
+                if fixed is not None:
+                    fixed.low_confidence = True
+                    c.num = fixed
+                    c.ocr_text, c.text = c.text, corrected
 
 
 _CONNECTORS = (",", "-", ":", " and", " in", " of", " for", " the", " from", " due", " to", " on", " after", " within", " less")

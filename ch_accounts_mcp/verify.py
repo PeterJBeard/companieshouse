@@ -175,10 +175,67 @@ def column_sequences(figs: list[Figure]) -> dict[tuple, list[Figure]]:
     return seqs
 
 
+_IDENTITY_LABELS = [
+    "netcurrentassets",
+    "netcurrentliabilities",
+    "netcurrentliabilitiesassets",
+    "netcurrentassetsliabilities",
+    "totalassetslesscurrentliabilities",
+    "totalliabilities",
+    "netassets",
+    "netliabilities",
+    "totalequityandliabilities",
+]
+
+
+def is_subtotal_identity(label: str) -> bool:
+    """Fuzzy, because OCR on poor scans gives 'Net current llabltes' and 'Totalliabllities'."""
+    from difflib import SequenceMatcher
+
+    t = re.sub(r"[^a-z]", "", label.lower())
+    if not 8 <= len(t) <= 40:
+        return False
+    return any(SequenceMatcher(None, t, c).ratio() >= 0.86 for c in _IDENTITY_LABELS)
+
+
+def _is_proven_subtotal(f: Figure) -> bool:
+    return f.verified and any(ch["rule"] in ("casts", "casts_forward", "casts_subtotals") for ch in f.checks)
+
+
+def cast_subtotal_pairs(seq: list[Figure]) -> int:
+    """Balance-sheet identities across already-proven subtotals.
+
+    IFRS layouts put 'Total assets' between the current-assets subtotal and 'Net current liabilities',
+    so the collapsing stack has consumed the subtotal it needs. Only named identity lines are tried,
+    and only against pairs among the four nearest proven subtotals above them.
+    """
+    found = 0
+    for i, f in enumerate(seq):
+        if f.value == 0 or not is_subtotal_identity(f.label):
+            continue
+        prior = [g for g in seq[:i] if _is_proven_subtotal(g)][-4:]
+        hit = None
+        for a in range(len(prior)):
+            for b in range(a + 1, len(prior)):
+                if prior[a].value + prior[b].value == f.value:
+                    hit = (prior[a], prior[b])
+        if hit is None:
+            continue
+        f.add_check("casts_subtotals", f"Equals {hit[0].label or 'subtotal'} {hit[0].raw} + {hit[1].label or 'subtotal'} {hit[1].raw}", [hit[0].fid, hit[1].fid])
+        for g in hit:
+            g.add_check("casts_to", f"Part of {f.label} {f.raw}", [f.fid])
+        _mark(f, False)
+        found += 1
+    return found
+
+
 def cast_all(figs: list[Figure]) -> None:
-    for seq in column_sequences(figs).values():
+    seqs = column_sequences(figs)
+    for seq in seqs.values():
         cast_sequence(seq, "down")
         cast_sequence(list(reversed(seq)), "up")
+    for seq in seqs.values():
+        cast_subtotal_pairs(seq)
 
 
 def cast_rows(figs: list[Figure], sections: dict[tuple[int, int], Section]) -> None:

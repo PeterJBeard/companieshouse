@@ -43,8 +43,31 @@ def _letters(s: str) -> str:
     return re.sub(r"[^a-z]", "", s.lower())
 
 
+_RUNNING_HEADER = re.compile(r"(annual\s+)?report\s+and\s+(the\s+)?(consolidated\s+|group\s+)?(audited\s+)?(financial\s+statements|accounts)", re.I)
+
+
+def is_running_header(text: str) -> bool:
+    """'X Limited | Report and financial statements | 49' repeated at the top of every page."""
+    t = text.strip()
+    if not _RUNNING_HEADER.search(t):
+        return False
+    return bool(re.search(r"\d{1,3}\s*$", t)) or bool(re.search(r"\b(limited|ltd|plc|llp)\b", t, re.I))
+
+
+def running_header_page_number(text: str) -> str | None:
+    if not is_running_header(text):
+        return None
+    m = re.search(r"(?:^|[\s|Il1])(\d{1,3})\s*$", text.strip())
+    if m:
+        return m.group(1)
+    m = re.match(r"^\s*(\d{1,3})\s*[|Il]", text)
+    return m.group(1) if m else None
+
+
 def classify_line(text: str) -> tuple[str, str] | None:
     """Return (kind, scope) if the line reads as a page heading."""
+    if is_running_header(text):
+        return None
     lt = _letters(text)
     if len(lt) < 5 or len(lt) > _MAX_LINE_LETTERS:
         return None
@@ -126,6 +149,14 @@ def classify_page(tokens: list[dict], page_height: float) -> tuple[str, str, str
 
 
 _ROMAN = re.compile(r"^(?=[ivxlc]+$)c{0,3}(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$", re.I)
+
+
+def header_page_number(tokens: list[dict], page_height: float) -> str | None:
+    for _y, text in merge_visual_lines([t for t in tokens if t["b"][1] < page_height * 0.12]):
+        n = running_header_page_number(text)
+        if n:
+            return n
+    return None
 
 
 def printed_page_number(bottom_tokens: list[dict], page_width: float) -> str | None:

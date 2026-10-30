@@ -230,6 +230,36 @@ def public_accounts_filings(company_number: str, pages: int = 3) -> list[dict]:
     return out
 
 
+def public_search(query: str, items: int = 20) -> list[dict]:
+    """Scrape the public company search (no API key)."""
+    with httpx.Client(timeout=30, headers={"User-Agent": USER_AGENT}, follow_redirects=True) as c:
+        r = c.get(f"{PUBLIC}/search/companies", params={"q": query})
+    if r.status_code != 200:
+        raise CompaniesHouseError(f"public search returned HTTP {r.status_code}")
+    out = []
+    text = lambda h: " ".join(unescape(re.sub(r"<[^>]+>", " ", h)).split())
+    for li in re.findall(r'<li class="type-company">(.*?)</li>', r.text, re.S):
+        num = re.search(r'href="/company/([A-Z0-9]{8})"', li)
+        if not num:
+            continue
+        name = re.search(r"<a [^>]*>(.*?)</a>", li, re.S)
+        ps = [text(p) for p in re.findall(r"<p[^>]*>(.*?)</p>", li, re.S)]
+        meta = ps[0] if ps else ""
+        inc = re.search(r"Incorporated on (\d{1,2} \w+ \d{4})", meta)
+        dis = re.search(r"Dissolved on (\d{1,2} \w+ \d{4})", meta)
+        out.append(
+            {
+                "company_number": num.group(1),
+                "name": text(name.group(1)) if name else None,
+                "status": "dissolved" if dis else "active or other (public search does not say)",
+                "incorporation_date": _parse_long_date(inc.group(1)) if inc else None,
+                "address": ps[1] if len(ps) > 1 else None,
+                "source": "public_site",
+            }
+        )
+    return out[:items]
+
+
 def _public_accounts_type(desc: str) -> str | None:
     d = desc.lower()
     for key, name in (("group of companies", "group"), ("full accounts", "full"), ("small", "small"), ("micro", "micro-entity"), ("dormant", "dormant"), ("total exemption", "total-exemption-full"), ("audit exemption", "audit-exemption-subsidiary")):

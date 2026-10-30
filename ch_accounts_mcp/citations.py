@@ -62,7 +62,10 @@ def build_figure_citation(f: Figure, doc: dict, page_info: dict, fid_to_cid: dic
         spans += _line_spans("label", f.row.label_cells)
     if f.row.note_cell is not None:
         spans.append({"role": "note", "text": f.row.note_cell.text, "bbox": _bbox([f.row.note_cell])})
-    spans.append({"role": "value", "text": f.cell.text, "bbox": _bbox([f.cell])})
+    vspan = {"role": "value", "text": f.cell.text, "bbox": _bbox([f.cell])}
+    if f.cell.ocr_text is not None:
+        vspan["ocr_text"] = f.cell.ocr_text
+    spans.append(vspan)
     unit_cells = [h for h in f.column.header_cells if _is_unit_text(h.text)]
     other_hdr = [h for h in f.column.header_cells if not _is_unit_text(h.text)]
     for h in sorted(other_hdr, key=lambda c: (c.bbox[1], c.bbox[0])):
@@ -143,7 +146,7 @@ def _norm_ws(s: str) -> str:
 def span_matches_tokens(span: dict, tokens: list[dict]) -> bool:
     """Trust test 15.12(1): stored text equals the OCR tokens inside the cited box."""
     inside = sorted(tokens_in_bbox(tokens, span["bbox"]), key=lambda t: (round(t["b"][1] / 4), t["b"][0]))
-    return _norm_ws(" ".join(t["t"] for t in inside)).replace(" ", "") == _norm_ws(span["text"]).replace(" ", "")
+    return _norm_ws(" ".join(t["t"] for t in inside)).replace(" ", "") == _norm_ws(span.get("ocr_text") or span["text"]).replace(" ", "")
 
 
 # --------------------------------------------------------------------------- quotes
