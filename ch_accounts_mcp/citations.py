@@ -130,13 +130,21 @@ def has_required_spans(c: dict) -> bool:
     return {"label", "value", "header"}.issubset(roles) and ("unit" in roles or bool(c.get("unit")))
 
 
-def tokens_in_bbox(tokens: list[dict], bbox: list[float], slack: float = 0.1) -> list[dict]:
-    x0, y0, x1, y1 = bbox
+def tokens_in_bbox(tokens: list[dict], bbox: list[float], slack: float = 0.1, min_overlap: float = 0.8) -> list[dict]:
+    """Tokens lying (mostly) inside `bbox`.
+
+    A token of the cited span lies wholly inside it, since the span box is the union of its tokens.
+    Unsnapped OCR boxes on stacked headings overlap the line above or below, so an area test is
+    used rather than the token centre.
+    """
+    x0, y0, x1, y1 = bbox[0] - slack, bbox[1] - slack, bbox[2] + slack, bbox[3] + slack
     out = []
     for t in tokens:
         b = t["b"]
-        cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
-        if x0 - slack <= cx <= x1 + slack and y0 - slack <= cy <= y1 + slack:
+        area = max(b[2] - b[0], 1e-6) * max(b[3] - b[1], 1e-6)
+        ix = max(0.0, min(x1, b[2]) - max(x0, b[0]))
+        iy = max(0.0, min(y1, b[3]) - max(y0, b[1]))
+        if ix * iy >= min_overlap * area:
             out.append(t)
     return out
 
