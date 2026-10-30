@@ -219,6 +219,36 @@ def render_gray(page: pymupdf.Page, dpi: int, clip: pymupdf.Rect | None = None) 
     return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w).copy()
 
 
+DASH_DPI = 300
+
+
+def flat_dash_in(page: pymupdf.Page, rect: list[float], dpi: int = DASH_DPI) -> list[float] | None:
+    """Bbox (PDF points) of a lone dash inside `rect`, or None.
+
+    OCR detectors often skip a bare '—' altogether, which loses nil comparatives. Accept only a
+    single short, flat, solid bar that does not touch the sides of the window (rules do).
+    """
+    import cv2
+
+    clip = pymupdf.Rect(rect) & page.rect
+    if clip.is_empty:
+        return None
+    g = render_gray(page, dpi, clip)
+    ink = (g < 140).astype(np.uint8)
+    n, _, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
+    s = dpi / 72
+    comps = [stats[i] for i in range(1, n) if stats[i][cv2.CC_STAT_WIDTH] >= s or stats[i][cv2.CC_STAT_HEIGHT] >= s]
+    if len(comps) != 1:
+        return None
+    x, y, w, h, area = (int(v) for v in comps[0])
+    wpt, hpt = w / s, h / s
+    if not (2.5 <= wpt <= 14 and hpt <= 2.2 and wpt >= 2.5 * hpt and area >= 0.5 * w * h):
+        return None
+    if x <= 0 or x + w >= ink.shape[1]:
+        return None
+    return [round(clip.x0 + x / s, 2), round(clip.y0 + y / s, 2), round(clip.x0 + (x + w) / s, 2), round(clip.y0 + (y + h) / s, 2)]
+
+
 def render_png(page: pymupdf.Page, dpi: int, clip: pymupdf.Rect | None = None) -> bytes:
     return page.get_pixmap(dpi=dpi, clip=clip, alpha=False).tobytes("png")
 

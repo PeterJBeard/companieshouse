@@ -17,7 +17,7 @@ from . import __version__, ocr
 from .cache import Cache, get_cache
 from .citations import PROVENANCE, build_figure_citation, build_quote_citation, citation_id, find_quote, render_crop
 from .config import settings
-from .layout import PageLayout, build_rows, rebuild_page, to_markdown
+from .layout import PageLayout, build_rows, insert_dash, missing_value_slots, rebuild_page, to_markdown
 from .triage import (
     PageInfo,
     build_notes_index,
@@ -27,6 +27,7 @@ from .triage import (
     note_heading_candidates,
     page_ranges,
     printed_page_number,
+    reconcile_printed_pages,
 )
 from .verify import VERIFIED, Figure, cast_all, cast_rows, cross_check, figures_from_layout, summary
 
@@ -55,7 +56,8 @@ STATEMENT_TITLES = {
     "cash_flow": "Statement of cash flows",
 }
 TILE_DPI = 110
-RESULT_VERSION = 5
+RESULT_VERSION = 6
+PAGEMAP_VERSION = 2
 
 _doc_locks: dict[str, threading.RLock] = {}
 _doc_locks_guard = threading.Lock()
@@ -176,11 +178,11 @@ class Document:
 
     def page_map(self) -> tuple[dict, bool, dict]:
         cached = self.cache.get_json(self.sha, "pagemap.json")
-        if cached:
+        if cached and cached.get("pagemap_version") == PAGEMAP_VERSION:
             return cached, True, {}
         with _lock_for(self.sha):
             cached = self.cache.get_json(self.sha, "pagemap.json")
-            if cached:
+            if cached and cached.get("pagemap_version") == PAGEMAP_VERSION:
                 return cached, True, {}
             return self._triage()
 
@@ -228,6 +230,7 @@ class Document:
             infos.append(info)
             cands.append((p, toks, w))
         build_page_map(infos)
+        reconcile_printed_pages(infos)
         notes_cands = []
         for (p, toks, w), info in zip(cands, infos):
             if info.kind == "notes":
@@ -237,6 +240,7 @@ class Document:
         _close_note_ranges(notes_index, infos)
         timings["classify"] = _ms(t2)
         pm = {
+            "pagemap_version": PAGEMAP_VERSION,
             "pages": [i.to_dict() for i in infos],
             "ranges": page_ranges(infos),
             "notes_index": notes_index,
@@ -346,8 +350,23 @@ class Document:
         key = (page, dpi)
         if key not in self._layouts:
             w, h = self.page_size(page)
-            self._layouts[key] = rebuild_page(tokens, page, w, h)
+            lay = rebuild_page(tokens, page, w, h)
+            if not self.is_text_page(page):
+                self._fill_ink_dashes(lay)
+            self._layouts[key] = lay
         return self._layouts[key]
+
+    def _fill_ink_dashes(self, lay: PageLayout) -> None:
+        slots = missing_value_slots(lay)
+        if not slots:
+            return
+        cols_by_row = {id(r): s.value_columns() for s in lay.sections for r in s.rows}
+        with self._pdf_lock:
+            pg = self.pdf[lay.page - 1]
+            for row, col, rect in slots:
+                bbox = ocr.flat_dash_in(pg, rect)
+                if bbox:
+                    insert_dash(row, col, bbox, cols_by_row[id(row)])
 
     # ------------------------------------------------------------------ primary statements
 
@@ -727,6 +746,7 @@ def _merge_reread(a: list[Figure], b: list[Figure], reread_pages: set[int]) -> t
             prior_raw = f.raw
             # adopt the 300 DPI reading into the 200 DPI layout cell, so tables and citations stay consistent
             f.cell.text, f.cell.num, f.cell.tokens, f.cell.bbox, f.cell.conf = g.cell.text, g.cell.num, g.cell.tokens, g.cell.bbox, g.cell.conf
+            f.cell.source, f.cell.ocr_text = g.cell.source, g.cell.ocr_text
             f.value, f.decimals, f.raw, f.low_confidence = g.value, g.decimals, g.raw, g.low_confidence
             f.status = "verified_after_reread"
             f.checks = [dict(ch, related=[remap.get(r, r) for r in ch["related"]]) for ch in g.checks]

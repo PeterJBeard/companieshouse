@@ -144,3 +144,25 @@ def test_balance_sheet_equity_agrees_to_equity_statement_closing_row():
     cross_check(figs)
     pl = _by(bs, "Profit and loss account")
     assert any(c["rule"] == "agrees_equity_statement" for c in pl.checks)
+
+
+def test_two_equal_detail_lines_do_not_verify_each_other():
+    lines = [
+        (100, [R(440, "2024"), R(520, "2023")]),
+        (130, [L(60, "Deferred tax assets"), R(440, "119"), R(520, "1")]),
+        (145, [L(60, "Trade and other receivables"), R(440, "11"), R(520, "1")]),
+    ]
+    _, figs = _figs(lines)
+    cast_all(figs)
+    assert all(f.status == "unverified" for f in figs)
+
+
+def test_single_line_block_subtotal_still_agrees():
+    lines = [
+        (100, [R(440, "2024"), R(520, "2023")]),
+        (130, [L(60, "Deferred tax liabilities"), R(440, "(69)"), R(520, "(50)")]),
+        (145, [R(440, "(69)"), R(520, "(50)")]),
+    ]
+    _, figs = _figs(lines)
+    cast_all(figs)
+    assert all(f.status in VERIFIED for f in figs)

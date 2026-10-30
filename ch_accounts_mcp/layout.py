@@ -131,6 +131,7 @@ class Cell:
     column: int | None = None
     role: str = "label"  # label | note | value | header | other
     ocr_text: str | None = None  # set when text was corrected from the raw OCR reading
+    source: str = "ocr"  # "ink" for a dash found by ink analysis where OCR returned nothing
 
     @property
     def x0(self) -> float:
@@ -270,7 +271,53 @@ def build_cells(row: list[dict], char_w: float) -> list[Cell]:
             c.num = parse_number(c.text)
             if c.num is None:
                 c.kind = "text"
+            elif not c.num.is_dash and _flat_ink(c):
+                c.ocr_text, c.text = c.text, "-"
+                c.num = ParsedNumber(Decimal(0), 0, "-", True, True)
     return cells
+
+
+def missing_value_slots(layout: PageLayout) -> list[tuple[Row, Column, list[float]]]:
+    """Empty value-column cells inside each statement block, as (row, column, search rect)."""
+    out = []
+    for s in layout.sections:
+        cols = s.value_columns()
+        idx = [i for i, r in enumerate(s.rows) if r.values]
+        if not cols or not idx:
+            continue
+        hs = [r.y1 - r.y0 for r in s.rows if r.values]
+        h = _median(hs, 7.0)
+        for r in s.rows[idx[0] : idx[-1] + 1]:
+            if r.kind in ("consumed", "header", "footer") or not (r.label or r.values):
+                continue
+            for col in cols:
+                if col.key in r.values:
+                    continue
+                rect = [col.x0 - 3, r.yc - 0.55 * h, col.x1 + 3, r.yc + 0.55 * h]
+                if any(c.x1 > rect[0] and c.x0 < rect[2] for c in r.cells):
+                    continue
+                out.append((r, col, rect))
+    return out
+
+
+def insert_dash(row: Row, col: Column, bbox: list[float], cols: list[Column]) -> Cell:
+    cell = Cell("-", bbox, 1.0, [], "number", ParsedNumber(Decimal(0), 0, "-", False, True), column=col.index, role="value", source="ink")
+    row.cells.append(cell)
+    row.cells.sort(key=lambda c: c.x0)
+    row.values[col.key] = cell
+    order = {c.key: i for i, c in enumerate(cols)}
+    row.values = dict(sorted(row.values.items(), key=lambda kv: order.get(kv[0], 99)))
+    row.kind = "data"
+    return cell
+
+
+def _flat_ink(c: Cell) -> bool:
+    """A one-character reading whose ink box is a flat bar is a dash, whatever OCR says ('—' often reads as '1')."""
+    core = re.sub(r"[()]", "", c.text)
+    if len(core) != 1 or len(c.tokens) != 1:
+        return False
+    w, h = c.bbox[2] - c.bbox[0], c.bbox[3] - c.bbox[1]
+    return h > 0 and w >= 2.5 * h and h < 2.0
 
 
 def _extend(cell: Cell, t: dict, text: str) -> None:
@@ -628,7 +675,8 @@ def _fix_misread_thousands(s: Section) -> None:
                     c.ocr_text, c.text = c.text, corrected
 
 
-_CONNECTORS = (",", "-", ":", " and", " in", " of", " for", " the", " from", " due", " to", " on", " after", " within", " less")
+# no ":" here: "Items that will not be reclassified:" heads a block, it does not wrap onto the next line
+_CONNECTORS = (",", "-", " and", " in", " of", " for", " the", " from", " due", " to", " on", " after", " within", " less")
 
 
 def section_period_columns(s: Section) -> dict[str, list[Column]]:

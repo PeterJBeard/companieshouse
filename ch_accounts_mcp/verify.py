@@ -99,14 +99,29 @@ def _unit(decimals: int) -> Decimal:
     return Decimal(1).scaleb(-decimals)
 
 
+_TOTAL_WORDS = ("total", "net", "profit", "loss", "comprehensive", "equity", "shareholders", "members", "funds", "surplus", "deficit", "balance", "result", "subtotal")
+
+
+def _total_like(f: Figure) -> bool:
+    """A line that may restate the single line above it: an unlabelled subtotal or a named total (OCR-tolerant)."""
+    from difflib import SequenceMatcher
+
+    words = re.findall(r"[a-z]+", (f.label or "").lower())
+    if not words:
+        return True
+    if re.search(r"for the (financial )?(year|period)", " ".join(words)):
+        return True
+    return any(SequenceMatcher(None, words[0], w).ratio() >= 0.75 for w in _TOTAL_WORDS)
+
+
 def _try_collapse(stack: list[_Node], f: Figure, allow_rounding: bool) -> tuple[int, bool] | None:
     """Return (k, rounding) for the smallest k whose last-k sum equals f.value."""
     top = min(MAX_K, len(stack))
     for k in range(1, top + 1):
         members = stack[-k:]
         s = sum((n.value for n in members), Decimal(0))
-        if k == 1 and f.value == 0:
-            continue  # "- equals -" proves nothing
+        if k == 1 and (f.value == 0 or not _total_like(f)):
+            continue  # "- equals -", or two detail lines that happen to be equal, proves nothing
         if all(n.value == 0 for n in members) and f.value == 0:
             continue
         if s == f.value:

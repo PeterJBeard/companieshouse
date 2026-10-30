@@ -1,0 +1,84 @@
+{
+  "name": "J.C. Bamford Excavators Limited, group accounts to 31 December 2024",
+  "company_number": "00561597",
+  "transaction_id": "MzQ4MzE5NDc3MWFkaXF6a2N4",
+  "sha256": "746032973eb201a342576647a29cb3b2d5da87276894d0df563d989844e402a9",
+  "framework": "FRS 102 (full, group)",
+  "scan": "image-only PDF, no text layer",
+  "keyed_by": "Hand-keyed by the build agent from 125 DPI page renders, not from OCR output. Each row is [label, current year, prior year]; null means blank in the filing; an empty label is an unlabelled subtotal.",
+  "pages": [
+    {
+      "pdf_page": 13, "statement": "income_statement", "scope": "group", "unit": "£m", "years": [2024, 2023],
+      "rows": [
+        ["Turnover", 4878.8, 5331.2],
+        ["Cost of sales", -3857.3, -4208.2],
+        ["Gross profit", 1021.5, 1123.0],
+        ["Distribution costs", -225.7, -253.1],
+        ["Administrative expenses", -328.9, -342.6],
+        ["Operating profit", 466.9, 527.3],
+        ["Share of associate's profit before tax", 5.9, 7.4],
+        ["Interest receivable and similar income", 26.9, 47.8],
+        ["Interest payable and similar expenses", -55.7, -67.2],
+        ["Profit before taxation", 444.0, 515.3],
+        ["Tax on profit", -128.0, -129.3],
+        ["Profit for the financial year", 316.0, 386.0],
+        ["Profit for the financial year", 316.0, 386.0],
+        ["Foreign exchange movements", -0.3, -39.1],
+        ["Re-measurement of defined benefit pension liability", 43.0, -24.6],
+        ["Movement on deferred tax relating to net defined benefit liability", -10.8, 6.2],
+        ["Other comprehensive income/(expense) net of tax", 31.9, -57.5],
+        ["Total comprehensive income for the year", 347.9, 328.5]
+      ]
+    },
+    {
+      "pdf_page": 14, "statement": "balance_sheet", "scope": "group", "unit": "£m", "years": [2024, 2023],
+      "rows": [
+        ["Intangible assets", 18.2, 22.1],
+        ["Tangible assets", 533.6, 499.2],
+        ["Investments", 9.5, 10.3],
+        ["", 561.3, 531.6],
+        ["Stock", 666.3, 595.1],
+        ["Debtors", 747.6, 1086.7],
+        ["Investments", 15.4, 7.7],
+        ["Cash at bank and in hand", 265.1, 415.6],
+        ["", 1694.4, 2105.1],
+        ["Creditors: amounts falling due within one year", -1113.9, -1145.4],
+        ["Net current assets", 580.5, 959.7],
+        ["Total assets less current liabilities", 1141.8, 1491.3],
+        ["Creditors: amounts falling due after more than one year", -0.6, -0.6],
+        ["Provisions for liabilities", -109.0, -96.1],
+        ["Pension scheme deficit", -136.1, -191.4],
+        ["Net assets", 896.1, 1203.2],
+        ["Called up share capital", 0.1, 0.1],
+        ["Share premium account", 5.0, 5.0],
+        ["Retained earnings", 891.0, 1198.1],
+        ["Total equity", 896.1, 1203.2]
+      ]
+    },
+    {
+      "pdf_page": 15, "statement": "balance_sheet", "scope": "company", "unit": "£m", "years": [2024, 2023],
+      "rows": [
+        ["Intangible assets", 9.9, 12.4],
+        ["Tangible assets", 188.0, 175.3],
+        ["Investments", 239.8, 239.8],
+        ["", 437.7, 427.5],
+        ["Stock", 87.3, 86.7],
+        ["Debtors", 526.8, 834.5],
+        ["Investments", 15.4, 7.7],
+        ["Cash at bank and in hand", 251.6, 239.4],
+        ["", 881.1, 1168.3],
+        ["Creditors: amounts falling due within one year", -542.3, -579.6],
+        ["Net current assets", 338.8, 588.7],
+        ["Total assets less current liabilities", 776.5, 1016.2],
+        ["Creditors: amounts falling due after more than one year", -0.6, -0.6],
+        ["Provisions for liabilities", -59.4, -50.5],
+        ["Pension scheme deficit", -136.1, -191.4],
+        ["Net assets", 580.4, 773.7],
+        ["Called up share capital", 0.1, 0.1],
+        ["Share premium account", 5.0, 5.0],
+        ["Retained earnings", 575.3, 768.6],
+        ["Total equity", 580.4, 773.7]
+      ]
+    }
+  ]
+}

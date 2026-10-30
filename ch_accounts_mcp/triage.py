@@ -106,11 +106,43 @@ class PageInfo:
     heading: str | None = None
     continuation: bool = False
     printed_page: str | None = None
+    printed_page_inferred: bool = False
     text_layer: bool = False
     triage_ms: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def reconcile_printed_pages(pages: list[PageInfo], window: int = 3) -> None:
+    """Make printed page numbers agree with their neighbours.
+
+    Scans pick up stray digits from margin noise ('1' read off a binding shadow), and some
+    statement pages carry no number at all. A reading is kept when a nearby page has the same
+    PDF-to-printed offset; otherwise, when the nearest numbered pages on both sides agree on an
+    offset, the number is replaced or filled in from that offset and marked as inferred.
+    """
+    offs: dict[int, int] = {}
+    for p in pages:
+        if p.printed_page and p.printed_page.isdigit():
+            offs[p.page] = p.page - int(p.printed_page)
+
+    def supported(page: int) -> bool:
+        o = offs[page]
+        return any(offs.get(page + d) == o for d in range(-window, window + 1) if d)
+
+    good = {pg: o for pg, o in offs.items() if supported(pg)}
+    for p in pages:
+        if p.page in good:
+            continue
+        if p.printed_page and not p.printed_page.isdigit():
+            continue  # roman numerals in the front matter
+        before = next((good[q] for q in range(p.page - 1, max(0, p.page - 4 * window), -1) if q in good), None)
+        after = next((good[q] for q in range(p.page + 1, p.page + 4 * window) if q in good), None)
+        if before is not None and before == after and p.page - before > 0:
+            p.printed_page, p.printed_page_inferred = str(p.page - before), True
+        elif p.page in offs:
+            p.printed_page = None
 
 
 def lines_from_tokens(tokens: list[dict]) -> list[tuple[float, str, list[dict]]]:

@@ -196,3 +196,58 @@ def test_notes_index_keeps_increasing_chain():
     idx = build_notes_index(cands)
     assert [n["note"] for n in idx] == [12, 13, 14]
     assert idx[0]["title"] == "Debtors"
+
+
+def test_heading_ending_in_colon_is_not_joined_to_the_next_line():
+    lines = [
+        (100, [R(440, "2024"), R(520, "2023")]),
+        (112, [R(440, "£'000"), R(520, "£'000")]),
+        (130, [L(60, "Items that will not be reclassified to profit or loss:")]),
+        (141, [L(70, "Remeasurement losses on pension plans"), R(440, "(1,056)"), R(520, "(402)")]),
+    ]
+    rows = [r for r in _layout(lines).sections[0].rows if r.values]
+    assert rows[0].label == "Remeasurement losses on pension plans"
+
+
+def test_flat_ink_read_as_a_digit_is_a_dash():
+    toks = tokens(
+        [
+            (100, [R(440, "2024"), R(520, "2023")]),
+            (130, [L(60, "Deferred tax assets"), R(440, "119"), R(520, "1")]),
+            (145, [L(60, "Other receivables"), R(440, "11"), R(520, "6")]),
+        ]
+    )
+    one = next(t for t in toks if t["t"] == "1")
+    one["b"] = [510.8, 133.7, 517.7, 134.4]  # a 7 pt wide, 0.7 pt tall bar, as on the Boots UK 2024 scan
+    row = next(r for r in rebuild_page(toks, 1, W, H).sections[0].rows if r.values)
+    cell = row.values["2023"]
+    assert cell.num.is_dash and cell.num.value == 0 and cell.ocr_text == "1"
+    assert not row.values["2024"].num.is_dash
+
+
+def test_flat_dash_found_from_ink_but_not_digits_or_rules():
+    import pymupdf
+
+    from ch_accounts_mcp.ocr import flat_dash_in
+
+    doc = pymupdf.open()
+    pg = doc.new_page(width=595, height=842)
+    pg.draw_line((500, 134), (507, 134), width=0.8)  # a nil comparative drawn as an em dash
+    pg.insert_text((500, 160), "7", fontsize=9)
+    pg.draw_line((480, 180), (525, 180), width=0.6)  # a subtotal rule wider than the search window
+    dash = flat_dash_in(pg, [495, 130, 512, 138])
+    assert dash and 499 < dash[0] < 501 and 506 < dash[2] < 508
+    assert flat_dash_in(pg, [495, 152, 512, 162]) is None
+    assert flat_dash_in(pg, [495, 176, 512, 184]) is None
+    assert flat_dash_in(pg, [495, 300, 512, 308]) is None
+
+
+def test_printed_page_numbers_reconciled_with_neighbours():
+    from ch_accounts_mcp.triage import PageInfo, reconcile_printed_pages
+
+    read = {20: "18", 21: None, 22: "20", 23: "1", 24: None, 25: None, 26: "1", 27: None, 28: "26", 29: None, 30: "28", 31: "29"}
+    pages = [PageInfo(page=p, printed_page=v) for p, v in read.items()]
+    reconcile_printed_pages(pages)
+    got = {p.page: (p.printed_page, p.printed_page_inferred) for p in pages}
+    assert got[26] == ("24", True) and got[24] == ("22", True) and got[23] == ("21", True)
+    assert got[28] == ("26", False) and got[20] == ("18", False)
