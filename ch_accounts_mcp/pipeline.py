@@ -604,6 +604,51 @@ class Document:
         return out
 
 
+    def tables(self, page_ranges: dict[int, tuple[float, float]], statement: str, scope: str = "unknown") -> list[dict]:
+        """Numeric tables inside y-ranges of pages (notes), cast and cited like the primary statements."""
+        from dataclasses import replace
+
+        toks, _ = self.tokens(sorted(page_ranges), ocr.FULL_DPI)
+        pm, _, _ = self.page_map()
+        infos = {p["page"]: p for p in pm["pages"]}
+        out = []
+        doc = dict(self.meta, sha256=self.sha)
+        new_cits: dict[str, dict] = {}
+        for p, (y0, y1) in sorted(page_ranges.items()):
+            L = self.layout(p, toks[p], ocr.FULL_DPI)
+            secs = []
+            for s in L.sections:
+                rows = [r for r in s.rows if y0 - 1 <= r.y0 < y1 - 1 and (r.values or len(r.label) <= 60)]
+                if any(r.values for r in rows):
+                    secs.append(replace(s, rows=rows))
+            if not secs:
+                continue
+            sub = replace(L, sections=secs)
+            sc = scope if scope != "unknown" else infos[p].get("scope", "unknown")
+            figs = figures_from_layout(sub, statement, sc, f"t{p}_")
+            cast_all(figs)
+            cast_rows(figs, {(p, i): s for i, s in enumerate(secs)})
+            fid_to_cid = {f.fid: citation_id(self.sha, f.page, statement, f.key, round(f.row.y0, 1), round(f.cell.bbox[2], 1), f.raw) for f in figs}
+            rows_out = []
+            for f in figs:
+                c = build_figure_citation(f, doc, infos[p], fid_to_cid)
+                c["crop_url"] = crop_url(self.sha, c["citation_id"])
+                c["viewer_url"] = viewer_url(self.sha, c["citation_id"])
+                new_cits[c["citation_id"]] = c
+                rows_out.append({"label": f.label, "column": f.key, "value": float(f.value), "raw": f.raw, "status": f.status, "provenance": c["status"], "citation_id": c["citation_id"], "pdf_page": p})
+            out.append(
+                {
+                    "pdf_page": p,
+                    "printed_page": infos[p].get("printed_page"),
+                    "markdown": to_markdown(sub, {id(f.cell): f.status for f in figs}),
+                    "figures": rows_out,
+                    "verification": summary(figs),
+                }
+            )
+        self._store_citations(new_cits)
+        return out
+
+
 _cit_lock = threading.Lock()
 
 

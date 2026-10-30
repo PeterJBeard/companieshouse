@@ -343,6 +343,7 @@ def extract_claims(text: str) -> list[dict]:
                 "value": val,
                 "decimals": dec,
                 "multiplier": Decimal(1) if is_pct else _multiplier(unit),
+                "unit_given": bool(unit) and not is_pct,
                 "negative": bool(m.group("neg")) and m.group(0).strip().startswith(("(", "-", "−")),
                 "cited": tag,
             }
@@ -363,18 +364,85 @@ def match_number(claim: dict, figures: list[dict]) -> tuple[dict | None, str]:
                 fv = fv * 100
             elif claim["kind"] == "percentage":
                 continue
-            mult = Decimal(1)
+            mult = Decimal(1) if f.get("is_ratio") else unit_multiplier(f.get("unit"))
         else:
             if claim["kind"] == "percentage":
                 continue
             fv = Decimal(f["value_exact"])
             mult = unit_multiplier(f.get("unit"))
-        actual = abs(fv * mult)
-        if abs(actual - abs(stated)) <= half:
+        # a number written without a unit is read as the filing writes it ("4,878.8" in a £m column)
+        candidates = [abs(fv * mult)] if claim.get("unit_given", True) or mult == 1 else [abs(fv * mult), abs(fv)]
+        for actual in candidates:
+            if abs(actual - abs(stated)) > half:
+                continue
             exact = actual == abs(stated)
+            if not exact and len(re.sub(r"\D", "", str(claim["value"])).lstrip("0")) < 2:
+                continue
             score = (0 if exact else 1, 0 if f.get("status") == "extracted_verified" else 1)
             if best is None or score < best[0]:
                 best = (score, f, "exact" if exact else "rounded")
+            break
     if best is None:
         return None, "unmatched"
     return best[1], best[2]
+
+
+def check_answer(doc: Any, draft_text: str, search_all_pages: bool = True) -> dict:
+    """Tag every number and quoted passage in a draft as matched (with citation) or unmatched (15.7)."""
+    claims = extract_claims(draft_text)
+    doc.primary_statements()
+    cits = doc.citations()
+    figures = [c for c in cits.values() if c.get("type") in ("figure", "computed")]
+    items = []
+    quotes_pending = []
+    for cl in claims:
+        if cl["kind"] == "quote":
+            quotes_pending.append(cl)
+            continue
+        item = {"kind": cl["kind"], "text": cl["text"], "start": cl["start"], "end": cl["end"]}
+        if cl["cited"]:
+            target = cits.get(cl["cited"])
+            if target is None:
+                item.update(status="unmatched", reason=f"cited id {cl['cited']} does not exist for this document")
+            else:
+                f, how = match_number(cl, [target])
+                if f is None:
+                    item.update(status="unmatched", reason=f"does not agree to the cited figure {target.get('raw') or target.get('display')} [{cl['cited']}]", cited=cl["cited"])
+                else:
+                    item.update(status="matched", citation_id=f["citation_id"], how=how, provenance=f["status"])
+        else:
+            f, how = match_number(cl, figures)
+            if f is None:
+                item.update(status="unmatched", reason="no figure in the filing or computed result agrees, allowing for units and rounding")
+            else:
+                item.update(status="matched", citation_id=f["citation_id"], how=how, provenance=f["status"], label=f.get("label") or f.get("metric"), pdf_page=f.get("pdf_page"))
+        if item.get("status") == "matched" and item.get("provenance") == "extracted_unverified":
+            item["warning"] = "matched to a figure that is unverified; flag it as uncertain"
+        items.append(item)
+    if quotes_pending:
+        if search_all_pages:
+            pm, _, _ = doc.page_map()
+            doc.tokens(list(range(1, pm["page_count"] + 1)), 200)
+        for cl in quotes_pending:
+            q = doc.quote(cl["text"])
+            item = {"kind": "quote", "text": cl["text"], "start": cl["start"], "end": cl["end"]}
+            if q is None:
+                item.update(status="unmatched", reason="no verbatim match in the filing text")
+            else:
+                item.update(status="matched", citation_id=q["citation_id"], pdf_page=q["pdf_page"], printed_page=q.get("printed_page"), provenance="quoted")
+            items.append(item)
+    items.sort(key=lambda i: i["start"])
+    out, pos = [], 0
+    for it in items:
+        out.append(draft_text[pos : it["end"]])
+        out.append(f" ⟦✔ {it['citation_id']}⟧" if it["status"] == "matched" and not it.get("warning") else (f" ⟦⚠ unverified {it['citation_id']}⟧" if it["status"] == "matched" else " ⟦✖ UNMATCHED⟧"))
+        pos = it["end"]
+    out.append(draft_text[pos:])
+    unmatched = [i for i in items if i["status"] == "unmatched"]
+    return {
+        "doc_id": doc.sha,
+        "items": items,
+        "tagged_draft": "".join(out),
+        "summary": {"claims": len(items), "matched": len(items) - len(unmatched), "unmatched": len(unmatched), "matched_unverified": sum(1 for i in items if i.get("warning"))},
+        "guidance": "Remove or explicitly flag every UNMATCHED item before answering. Items matched to unverified figures must be presented as uncertain.",
+    }

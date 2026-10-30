@@ -317,6 +317,8 @@ _worker_docs: dict[str, pymupdf.Document] = {}
 
 def _init_worker(engine_name: str, device: str, threads: int) -> None:
     global _worker_engine
+    # under the stdio transport stdout carries the MCP protocol; anything a model library prints must not reach it
+    os.dup2(2, 1)
     os.environ.setdefault("OMP_NUM_THREADS", str(threads))
     logging.getLogger("RapidOCR").setLevel(logging.ERROR)
     _worker_engine = make_engine(engine_name, device, threads)
