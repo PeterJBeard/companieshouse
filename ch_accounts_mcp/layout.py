@@ -14,7 +14,7 @@ from .triage import is_running_header
 
 NUM_RE1 = re.compile(r"^\(?-?[£$€]?\s?\d{1,3}(,\d{3})*(\.\d+)?\)?$")
 NUM_RE2 = re.compile(r"^\(?-?\d+(\.\d+)?\)?$")
-DASHES = {"-", "–", "—", "−", "--"}
+DASHES = {"-", "–", "—", "−", "--", "‒", "―", "一", "ー", "－"}  # OCR renders a nil dash as any of these
 _CONFUSABLE = str.maketrans({"O": "0", "o": "0", "l": "1", "I": "1", "S": "5", "B": "8"})
 _CURRENCY_LEAD = re.compile(r"^(\(?)(?:[£$€]|f|E)(?=\d)")
 YEAR_RE = re.compile(r"^(19|20)\d{2}$")
@@ -41,7 +41,7 @@ def normalise_numeric(raw: str) -> tuple[str, bool] | None:
     s = raw.strip().replace(" ", "")
     if not s or re.fullmatch(r"'?[0O]{3}", s):
         return None
-    if s in DASHES or re.fullmatch(r"\(?[-–—−]\)?", s):
+    if s in DASHES or re.fullmatch(r"\(?[-–—−‒―一ー－]\)?", s):
         return "-", False
     s = s.replace("−", "-")
     sub = False

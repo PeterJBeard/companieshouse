@@ -219,34 +219,48 @@ def render_gray(page: pymupdf.Page, dpi: int, clip: pymupdf.Rect | None = None) 
     return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w).copy()
 
 
-DASH_DPI = 300
+DASH_DPI = 200
 
 
-def flat_dash_in(page: pymupdf.Page, rect: list[float], dpi: int = DASH_DPI) -> list[float] | None:
+def flat_dash_in(page: pymupdf.Page | np.ndarray, rect: list[float], dpi: int = DASH_DPI) -> list[float] | None:
     """Bbox (PDF points) of a lone dash inside `rect`, or None.
 
-    OCR detectors often skip a bare '—' altogether, which loses nil comparatives. Accept only a
-    single short, flat, solid bar that does not touch the sides of the window (rules do).
+    `page` is a pymupdf page or that page already rendered in grey at `dpi` (cheaper when many
+    cells on one scanned page are checked). OCR detectors often skip a bare '—' altogether,
+    which loses nil comparatives. Accept only a single short, flat, solid bar that does not
+    touch the sides of the window (rules do).
     """
     import cv2
 
-    clip = pymupdf.Rect(rect) & page.rect
-    if clip.is_empty:
-        return None
-    g = render_gray(page, dpi, clip)
+    s = dpi / 72
+    if isinstance(page, np.ndarray):
+        H, W = page.shape
+        x0, y0 = max(0, int(rect[0] * s)), max(0, int(rect[1] * s))
+        x1, y1 = min(W, int(np.ceil(rect[2] * s))), min(H, int(np.ceil(rect[3] * s)))
+        if x1 <= x0 or y1 <= y0:
+            return None
+        g = page[y0:y1, x0:x1]
+        ox, oy = x0 / s, y0 / s
+    else:
+        clip = pymupdf.Rect(rect) & page.rect
+        if clip.is_empty:
+            return None
+        g = render_gray(page, dpi, clip)
+        ox, oy = clip.x0, clip.y0
     ink = (g < 140).astype(np.uint8)
     n, _, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
-    s = dpi / 72
     comps = [stats[i] for i in range(1, n) if stats[i][cv2.CC_STAT_WIDTH] >= s or stats[i][cv2.CC_STAT_HEIGHT] >= s]
+    # a rule crossing the window (subtotal underline) is not part of the cell
+    comps = [c for c in comps if not (c[cv2.CC_STAT_WIDTH] >= 0.8 * ink.shape[1] and c[cv2.CC_STAT_HEIGHT] <= 2.5 * s)]
     if len(comps) != 1:
         return None
     x, y, w, h, area = (int(v) for v in comps[0])
     wpt, hpt = w / s, h / s
-    if not (2.5 <= wpt <= 14 and hpt <= 2.2 and wpt >= 2.5 * hpt and area >= 0.5 * w * h):
+    if not (2.0 <= wpt <= 14 and hpt <= 2.2 and wpt >= 1.8 * hpt and area >= 0.5 * w * h):
         return None
     if x <= 0 or x + w >= ink.shape[1]:
         return None
-    return [round(clip.x0 + x / s, 2), round(clip.y0 + y / s, 2), round(clip.x0 + (x + w) / s, 2), round(clip.y0 + (y + h) / s, 2)]
+    return [round(ox + x / s, 2), round(oy + y / s, 2), round(ox + (x + w) / s, 2), round(oy + (y + h) / s, 2)]
 
 
 def render_png(page: pymupdf.Page, dpi: int, clip: pymupdf.Rect | None = None) -> bytes:

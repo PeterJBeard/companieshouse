@@ -56,7 +56,7 @@ STATEMENT_TITLES = {
     "cash_flow": "Statement of cash flows",
 }
 TILE_DPI = 110
-RESULT_VERSION = 6
+RESULT_VERSION = 7
 PAGEMAP_VERSION = 2
 
 _doc_locks: dict[str, threading.RLock] = {}
@@ -362,11 +362,21 @@ class Document:
             return
         cols_by_row = {id(r): s.value_columns() for s in lay.sections for r in s.rows}
         with self._pdf_lock:
-            pg = self.pdf[lay.page - 1]
-            for row, col, rect in slots:
-                bbox = ocr.flat_dash_in(pg, rect)
-                if bbox:
-                    insert_dash(row, col, bbox, cols_by_row[id(row)])
+            gray = ocr.render_gray(self.pdf[lay.page - 1], ocr.DASH_DPI)
+        found: dict[int, list] = {}
+        for row, col, rect in slots:
+            bbox = ocr.flat_dash_in(gray, rect)
+            # a dash sits on the text centre line; rule fragments sit at the row's top or bottom
+            if bbox and abs((bbox[1] + bbox[3]) / 2 - (rect[1] + rect[3]) / 2) <= 0.3 * (rect[3] - rect[1]):
+                found.setdefault(id(row), []).append((row, col, bbox))
+        for hits in found.values():
+            row = hits[0][0]
+            cols = cols_by_row[id(row)]
+            # a line with no values read is a heading unless every column shows a dash
+            if not row.values and len(hits) < len({c.key for c in cols}):
+                continue
+            for _, col, bbox in hits:
+                insert_dash(row, col, bbox, cols)
 
     # ------------------------------------------------------------------ primary statements
 
