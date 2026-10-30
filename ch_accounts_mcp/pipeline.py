@@ -84,6 +84,19 @@ def viewer_url(sha: str, cid: str | None = None) -> str:
     return f"{base}/view/{sha}" + ("?" + "&".join(q) if q else "")
 
 
+def with_fresh_urls(c: dict) -> dict:
+    """Links depend on PUBLIC_BASE_URL and the signing key at serve time, not when the citation was made."""
+    c = dict(c)
+    sha, cid = c["doc_sha256"], c["citation_id"]
+    if c.get("type") == "computed":
+        first = (c.get("inputs") or [{}])[0].get("citation_id")
+        c["viewer_url"] = viewer_url(sha, first) if first else None
+    else:
+        c["viewer_url"] = viewer_url(sha, cid)
+        c["crop_url"] = crop_url(sha, cid)
+    return c
+
+
 def crop_url(sha: str, cid: str) -> str:
     from .server_auth import sign
 
@@ -503,7 +516,8 @@ class Document:
             self.cache.index_citations(self.sha, list(new))
 
     def citation(self, cid: str) -> dict | None:
-        return self.citations().get(cid)
+        c = self.citations().get(cid)
+        return with_fresh_urls(c) if c else None
 
     def crop(self, cid: str) -> bytes | None:
         name = f"crops/{cid}.png"

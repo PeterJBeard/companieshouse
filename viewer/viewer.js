@@ -59,7 +59,8 @@
       const li = el("li", { "data-id": c.citation_id });
       li.className = [current && current.citation_id === c.citation_id ? "active" : "", state.reviewed[c.citation_id] ? "reviewed" : "", state.flagged[c.citation_id] ? "flagged" : ""].join(" ");
       li.appendChild(el("span", { class: `ico ${c.status}`, title: LABELS[c.status] }, ICONS[c.status] || "?"));
-      li.appendChild(el("span", { class: "lbl", title: c.label || c.verbatim }, c.label || (c.verbatim || "").slice(0, 60)));
+      const name = c.label || (c.type === "figure" ? "(unlabelled subtotal)" : (c.verbatim || "").slice(0, 60));
+      li.appendChild(el("span", { class: "lbl", title: c.label || c.verbatim }, name));
       li.appendChild(el("span", { class: "val" }, c.raw || ""));
       if (c.column) li.appendChild(el("span", { class: "sub" }, `${c.column}${c.unit ? " · " + c.unit : ""}`));
       li.onclick = () => select(c.citation_id);
@@ -172,7 +173,7 @@
     const p = q("#d-prov");
     p.className = `prov ${c.status}`;
     p.textContent = `${ICONS[c.status] || ""} ${LABELS[c.status] || c.status}`;
-    q("#d-label").textContent = c.label || (c.type === "quote" ? "Quoted passage" : "");
+    q("#d-label").textContent = c.label || (c.type === "quote" ? "Quoted passage" : "(unlabelled subtotal)");
     q("#d-raw").textContent = c.raw || "";
     q("#d-unit").textContent = c.unit || "";
     q("#d-col").textContent = c.column_header || c.column || "–";
@@ -240,9 +241,9 @@
       doc = await getJSON(`/api/doc/${cfg.sha}${sig}`);
       banner();
       const data = await getJSON(`/api/citations/${cfg.sha}${sig}`);
-      cits = data.citations.sort((a, b) => (a.pdf_page - b.pdf_page) || ((a.row_bbox || a.spans[0].bbox)[1] - (b.row_bbox || b.spans[0].bbox)[1]) || ((a.spans.find((s) => s.role === "value") || a.spans[0]).bbox[0] - (b.spans.find((s) => s.role === "value") || b.spans[0]).bbox[0]));
-      cits = cits.filter((c) => (c.spans || []).length);
+      cits = data.citations.filter((c) => (c.spans || []).length).sort((a, b) => (a.pdf_page - b.pdf_page) || ((a.row_bbox || a.spans[0].bbox)[1] - (b.row_bbox || b.spans[0].bbox)[1]) || ((a.spans.find((s) => s.role === "value") || a.spans[0]).bbox[0] - (b.spans.find((s) => s.role === "value") || b.spans[0]).bbox[0]));
       for (const c of data.citations) byId[c.citation_id] = c;
+      if (cfg.trail) q("#trail").checked = true;
       if (cfg.citation && byId[cfg.citation]) select(cfg.citation);
       else { showPage(parseInt(cfg.page || "1", 10) || 1); renderList(); }
     } catch (err) {

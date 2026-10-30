@@ -72,7 +72,12 @@ class RapidOCREngine:
         if device == "cuda":
             kw.update({"det_use_cuda": True, "rec_use_cuda": True})
         self._engine = RapidOCR(**kw)
-        ver = getattr(rapidocr_onnxruntime, "__version__", "unknown")
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            ver = version("rapidocr-onnxruntime") + " onnxruntime " + version("onnxruntime")
+        except PackageNotFoundError:
+            ver = getattr(rapidocr_onnxruntime, "__version__", "unknown")
         self.model_version = f"rapidocr_onnxruntime {ver} / PP-OCRv4 det+rec (ch)"
 
     def recognize(self, rec_img: np.ndarray, det_img: np.ndarray, max_wh_ratio: float | None = None, stop: Callable[[list[OCRLine]], bool] | None = None) -> list[OCRLine]:

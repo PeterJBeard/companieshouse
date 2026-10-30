@@ -48,6 +48,8 @@ def normalise_numeric(raw: str) -> tuple[str, bool] | None:
     m = _CURRENCY_LEAD.match(s)
     if m:
         s = m.group(1) + s[m.end():]
+        if re.fullmatch(r"'?[0O]{3}", s):
+            return None
     if NUM_RE1.match(s) or NUM_RE2.match(s):
         return s, False
     # OCR confusables, only inside an otherwise numeric token

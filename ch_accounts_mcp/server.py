@@ -29,7 +29,7 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Respon
 from . import __version__
 from .cache import get_cache
 from .config import override_settings, settings
-from .pipeline import PRIMARY, TOOL_VERSION, Document, provenance_legend, resolve_statements, viewer_url
+from .pipeline import PRIMARY, TOOL_VERSION, Document, crop_url, provenance_legend, resolve_statements, viewer_url, with_fresh_urls
 from .server_auth import check_bearer, check_signature, sign
 
 log = logging.getLogger("ch_accounts_mcp")
@@ -161,6 +161,16 @@ def _load(company_number: str | None, year_end: str | None, transaction_id: str 
         else:
             data = fetch_url(pdf_url)
             source.update(source="pdf_url", source_url=pdf_url if "company-information.service.gov.uk" in pdf_url else None, download_url=pdf_url, **info)
+            if tx and info.get("company_number"):
+                try:
+                    c = _client()
+                    lst = c.accounts_filings(info["company_number"]) if c.has_key else public_accounts_filings(info["company_number"])
+                    c.close()
+                    f = next((f for f in lst if f.get("transaction_id") == tx), None)
+                    if f:
+                        source.update(filing_date=f.get("date"), made_up_date=f.get("made_up_date"), accounts_type=f.get("accounts_type"), filing_description=f.get("description"))
+                except Exception:  # filing metadata is a nicety; the document itself is what matters
+                    log.info("could not fetch filing metadata for %s", tx)
             doc = Document.from_bytes(data, source)
     else:
         filing = None
@@ -240,7 +250,7 @@ def _primary(doc_id: str, statements: list[str] | None, scope: str | None, inclu
         raise ValueError("scope must be group or company")
     sts = [s for s in res["statements"] if s["statement"] in want and (sc is None or s["scope"] == sc or s["scope"] == "unknown")]
     keep_pages = {p for s in sts for p in s["pages"]}
-    unverified = [u for u in res["unverified"] if u["pdf_page"] in keep_pages and u["statement"] in want]
+    unverified = [dict(u, crop_url=crop_url(doc.sha, u["citation_id"]), viewer_url=viewer_url(doc.sha, u["citation_id"])) for u in res["unverified"] if u["pdf_page"] in keep_pages and u["statement"] in want]
     out_sts = []
     for s in sts:
         d = dict(s)
@@ -498,7 +508,7 @@ async def view(request: Request) -> Response:
     if not _sha_ok(sha) or not _authorised(request, sha):
         return _deny()
     html = (VIEWER_DIR / "index.html").read_text(encoding="utf-8")
-    cfg = {"sha": sha, "sig": request.query_params.get("s") or "", "citation": request.query_params.get("c") or "", "page": request.query_params.get("p") or ""}
+    cfg = {"sha": sha, "sig": request.query_params.get("s") or "", "citation": request.query_params.get("c") or "", "page": request.query_params.get("p") or "", "trail": request.query_params.get("trail") == "1"}
     return HTMLResponse(html.replace("/*__CONFIG__*/null", json.dumps(cfg)))
 
 
@@ -552,7 +562,7 @@ async def api_citations(request: Request) -> Response:
     except KeyError:
         return JSONResponse({"error": "unknown document"}, status_code=404)
     cits = await anyio.to_thread.run_sync(d.citations)
-    return JSONResponse({"citations": list(cits.values())})
+    return JSONResponse({"citations": [with_fresh_urls(c) for c in cits.values()]})
 
 
 @mcp.custom_route("/tile/{sha}/{page}.png", methods=["GET"])
